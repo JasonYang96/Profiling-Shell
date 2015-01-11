@@ -16,10 +16,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "alloc.h"
-
+#include <stdlib.h>
 #include <error.h>
 #include <errno.h>
-#include <stdlib.h>
 
 static void
 memory_exhausted (int errnum)

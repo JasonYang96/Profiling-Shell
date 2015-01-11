@@ -17,8 +17,8 @@
 
 #include "command.h"
 #include "command-internals.h"
-
 #include <error.h>
+#include <errno.h>
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -29,8 +29,15 @@ prepare_profiling (char const *name)
   /* FIXME: Replace this with your implementation.  You may need to
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
-  error (0, 0, "warning: profiling not yet implemented");
-  return -1;
+  if (! *name) {
+  	error (1, errno, "%c: cannot open", *name);
+  	return -1;
+  }
+  return 1;
+  /*switch (*name){
+  	case 0: return 0; break;
+  	default: return 1; break;
+  } */
 }
 
 int
@@ -43,5 +50,8 @@ void
 execute_command (command_t c, int profiling)
 {
   /* FIXME: Replace this with your implementation, like 'prepare_profiling'.  */
-  error (1, 0, "command execution not yet implemented");
+	char* test = c->input;
+	test[0] = 'g';
+	int count = profiling;
+	count++;
 }

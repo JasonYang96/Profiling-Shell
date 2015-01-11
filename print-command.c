@@ -17,7 +17,7 @@
 
 #include "command.h"
 #include "command-internals.h"
-
+#include <error.h>
 #include <stdio.h>
 #include <stdlib.h>
 

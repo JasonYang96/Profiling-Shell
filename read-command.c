@@ -20,6 +20,8 @@
 #include "alloc.h"
 #include <error.h>
 #include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -27,8 +29,8 @@
 /* FIXME: Define the type 'struct command_stream' here.  This should
    complete the incomplete type declaration in command.h.  */
 struct command_stream {
-  command* cmd = NULL;
-  int cmd_total = 0;
+  command_t* cmd;
+  int cmd_total;
 };
 
 //enum of different token types
@@ -43,71 +45,127 @@ enum token_type
     WHILE_TOKEN,   // while A do B done
     INPUT_TOKEN, // A < B
     OUTPUT_TOKEN, // A > B
+    HEAD_TOKEN,
   };
 
 //linked list of token
-typedef struc token token_t;
+typedef struct token token_t;
 struct token
 {
   enum token_type type;
   char* storage;
+  size_t storage_size;
   token_t* next;
 };
 
-//linked list of token_list
-typedef struct token_list token_list_t;
-struct token_list
+//create a buffer for entire file, stream in all chars.
+char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t* size)
 {
-  token_t* head;
-  token_list_t* next;
-};
+  char* buffer = (char*) checked_malloc(32*sizeof(char));
+  size_t buffer_size = 32;
+  size_t count = 0;
+
+  char c;
+  while( c = (char*) get_next_byte(get_next_byte_argument) != EOF)
+  {
+    //realloc if buffer_size needs to be increased
+    if (count == buffer_size)
+    {
+      checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+    }
+    buffer[count] = c;
+    count++;
+  }
+
+  //update total # of chars in file
+  *size = count;
+
+  return buffer;
+}
 
 //creating new tokens
-token_t* create_token(enum token_type, char* storage)
+token_t* create_token(enum token_type type, char* storage, size_t size)
 {
   token_t* t = checked_malloc(sizeof(token_t));
-  t->type= token_type;
+  t->type= type;
   t->storage = storage;
+  t->storage_size = size;
   t->next = NULL;
   return t;
 }
 
-token_list* tokenize_stream(int (*get_next_byte) (void *), void *get_next_byte_argument)
+token_t* tokenize_stream(char* stream, size_t* stream_size)
 {
-  token_list_t* t_list = (token_list_t*) checked_malloc(sizeof(token_list_t));
-  token_list_t* current_list = t_list;
+  token_t* head = (token_t*) checked_malloc(sizeof(token_t));
+  head = create_token(HEAD_TOKEN, NULL, 0);
+  token_t* current = head;
 
-  char* buffer = (char*) checked_malloc(32*sizeof(char));
-  size_t buffer_size = 32;
-  int count = 0;
-
-  while( (char c = get_next_byte) != EOF)
+  for(size_t stream_index = 0; stream_index < *stream_size; stream_index++)
   {
-    buffer[count] = c;
-    count++;
+    char c = stream[stream_index];
 
-    //realloc if buffer_size needs to be increased
-    if (count == buffer_size)
+    //tokenize subshell command
+    if (c == '(')
     {
-      checked_realloc(buffer, (buffer_size + 32)*sizeof(char);
+      //ignore whitespace
+      while (stream[stream_index+1] == (' ' || '\n' || '\t'))
+      {
+        stream_index++;
+      }
+      c = stream[++stream_index];
+
+      char* buffer = (char*) checked_malloc(32*sizeof(char));
+      size_t buffer_size = 32;
+      size_t buffer_index = 0;
+      int open_counter = 1;
+      while (open_counter > 0)
+      {
+        //put everything until ) into storage of subshell token
+        stream[++stream_index] = c;
+
+        if (c == '(')
+        {
+          open_counter++;
+        }
+        else if (c == ')')
+        {
+          open_counter--;
+          //make subshell token if final closed parentheses
+          if (open_counter == 0)
+          {
+            current->next = create_token(SUBSHELL_TOKEN, buffer, buffer_index - 1);
+            current = current->next;
+          }
+        }
+        buffer[buffer_index++] = c;
+        //realloc if buffer_size needs to be increased
+        if (buffer_index == buffer_size)
+        {
+          checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+          buffer_size += 32;
+        }
+      }
     }
-
     //tokenize if command
-    if (c == 'f' && count >= 2 && buffer[count - 2] == 'i')
+    if (c == 'i' && stream[stream_index+1] == 'f'
+      && (stream[stream_index+2] == ' ' || stream[stream_index+2] == '\n'))
     {
+      stream_index += 3;
       int if_counter = 1;
       while(if_counter > 0)
       {
         //put everything until "fi" into storage of if token
       }
     }
-    //tokenize until command
-    else if (c == 'l' && count >= 5
-      && buffer[count-5] == 'u'
-      && buffer[count-4] == 'n'
-      && buffer[count-3] == 't'
-      && buffer[count-2] == 'i')
+    //tokenize until/while command
+    else if (c == 'u'
+      && stream[stream_index+1] == 'n'
+      && stream[stream_index+2] == 't'
+      && stream[stream_index+3] == 'i'
+      && stream[stream_index+4] == 'l'
+      && (stream[stream_index+5] == ' ' || stream[stream_index+5] == '\n'))
     {
+      stream_index += 6;
       int until_counter = 1;
       while(until_counter > 0)
       {
@@ -115,46 +173,71 @@ token_list* tokenize_stream(int (*get_next_byte) (void *), void *get_next_byte_a
       }
     }
     //tokenize while command
-    else if (c == 'e' && count >= 5
-      && buffer[count-5] == 'w'
-      && buffer[count-4] == 'h'
-      && buffer[count-3] == 'i'
-      && buffer[count-2] == 'l')
+    else if (c == 'w'
+      && stream[stream_index+1] == 'h'
+      && stream[stream_index+2] == 'i'
+      && stream[stream_index+3] == 'l'
+      && stream[stream_index+4] == 'e'
+      && (stream[stream_index+5] == ' ' || stream[stream_index+5] == '\n'))
     {
+      stream_index += 6;
       int while_counter = 1;
       while(while_counter > 0)
       {
         //put everything until "done" into storage of while token
       }
     }
-    //tokenize sequence or pipe command
-    else if (c == ';' || c == '|')
+    //tokenize simple command
+    else if (isalnum(c) || strchr("!%%+,-./:@^_", c) != NULL)
     {
-      //put everything into storage of sequence or pipe token
-    }
-    //tokenize input or output "command"
-    else if (c == '<' || c =='>')
-    {
-      //put everything into storage of < or > token
-    }
-    //tokenize subshell command
-    else if (c == '(')
-    {
-      int open_counter = 1;
-      while (open_counter > 0)
+      bool is_sequence = false;
+      bool is_pipe = false;
+      bool is_input = false;
+      bool is_output = false;
+      char* buffer = (char*) checked_malloc(32*sizeof(char));
+      size_t buffer_size = 32;
+      size_t buffer_index = 0;
+      while(isalnum(c) || strchr("!%%+,-./:@^_", c) != NULL)
       {
-        //put everything until ) into storage of subshell token
+        //realloc if buffer_size needs to be increased
+        if (buffer_index == buffer_size)
+        {
+          buffer = (char *) checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+          buffer_size += 32;
+        }
+
+        buffer[buffer_index] = c;
+
+        //tokenize sequence or pipe command
+        if (stream[stream_index+1] == ';')
+        {
+          is_sequence = true;
+          buffer[++buffer_index] = ';';
+          c = stream[stream_index + 2];
+        }
+        else if (stream[stream_index+1] == '|')
+        {
+          //put everything into storage of pipe token
+			is_pipe = true;
+        }
+        //tokenize input or output "command"
+        else if (stream[stream_index+1] == '<')
+        {
+          //put everything into storage of input token
+			is_input = true;
+        }
+        else if (stream[stream_index+1] == '>')
+        {
+          //put everything into storage of output token
+			is_output = true;
+        }
       }
+      //put everything into storage of simple token
     }
     //ignore whitespace
-    else if (c == ' ' || c == '\t')
+	else if (c == ' ' || c == '\t' || c == '\n')
     {
       //skip whitespace
-    }
-    //tokenize simple command
-    else if (//still not sure)
-    {
-      //put everything into storage of simple token
     }
     //don't recognize char
     else
@@ -162,7 +245,7 @@ token_list* tokenize_stream(int (*get_next_byte) (void *), void *get_next_byte_a
       //output error message
     }
   }
-  return t_list;
+  return head;
 }
 
 command_stream_t
@@ -170,15 +253,18 @@ make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
   /* FIXME */
+  size_t size = 0;
+  //char* stream = stream(get_next_byte,get_next_byte_argument, &size); //malloc'd
+  //token_t* t = tokenize_stream(stream, &size);
+
   command_stream_t cmd_stream;
-  parse_command(get_next_byte, get_next_byte_argument, cmd_stream)
-  return 0;
+  return cmd_stream;
 }
 
 command_t
 read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
-  error (1, 0, "command reading not yet implemented");
-  return 0;
+  command_t t;
+  return t;
 }
