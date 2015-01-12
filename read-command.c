@@ -66,12 +66,13 @@ char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t
   size_t count = 0;
 
   int c;
-  while( c = get_next_byte(get_next_byte_argument) != EOF)
+  while( (c = get_next_byte(get_next_byte_argument)) != EOF)
   {
     //realloc if buffer_size needs to be increased
     if (count == buffer_size)
     {
       checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+      buffer_size += 32;
     }
     buffer[count] = c;
     count++;
@@ -99,9 +100,9 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
   token_t* head = (token_t*) checked_malloc(sizeof(token_t));
   head = create_token(HEAD_TOKEN, NULL, 0);
   token_t* current = head;
-  size_t stream_index = 0;
 
-  for(; stream_index < *stream_size; stream_index++)
+  size_t stream_index;
+  for(stream_index = 0; stream_index < *stream_size; stream_index++)
   {
     char c = stream[stream_index];
 
@@ -246,11 +247,14 @@ make_command_stream (int (*get_next_byte) (void *),
 {
   /* FIXME */
 	//testing
-  size_t* size;
+  size_t init = 0;
+  size_t* size = &init;
   char* file_stream = stream(get_next_byte,get_next_byte_argument, size); //malloc'd
-  file_stream[0] = 'g';
+  // file_stream[0] = 'g';
   token_t* t = tokenize_stream(file_stream, size);
-  t->storage[0] = 'g';
+  // t->storage[0] = 'g';
+
+  // char test = get_next_byte(get_next_byte_argument);
 
   command_stream_t cmd_stream;
   cmd_stream->cmd_total = 0;
