@@ -326,9 +326,9 @@ make_command_stream (int (*get_next_byte) (void *),
 
   command_t command_test = commandFromToken(t);
 
-  command_stream_t cmd_stream;
+  command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
   cmd_stream->cmd_total = 0;
-  cmd_stream->cmd = NULL;
+  cmd_stream->cmd = &command_test;
   return cmd_stream;
 }
 
@@ -337,7 +337,7 @@ read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
 	s->cmd_total = 1;
-  command_t t;
+  command_t t = checked_malloc(sizeof(command_t));
   t->input = NULL;
   t->output = NULL;
   t->status = -1;
