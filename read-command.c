@@ -21,7 +21,7 @@
 #include <error.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdbool.h>
+#include <stdio.h>
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -65,8 +65,8 @@ char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t
   size_t buffer_size = 32;
   size_t count = 0;
 
-  char c;
-  while( c = (char*) get_next_byte(get_next_byte_argument) != EOF)
+  int c;
+  while( c = get_next_byte(get_next_byte_argument) != EOF)
   {
     //realloc if buffer_size needs to be increased
     if (count == buffer_size)
@@ -99,8 +99,9 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
   token_t* head = (token_t*) checked_malloc(sizeof(token_t));
   head = create_token(HEAD_TOKEN, NULL, 0);
   token_t* current = head;
+  size_t stream_index = 0;
 
-  for(size_t stream_index = 0; stream_index < *stream_size; stream_index++)
+  for(; stream_index < *stream_size; stream_index++)
   {
     char c = stream[stream_index];
 
@@ -190,10 +191,6 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
     //tokenize simple command
     else if (isalnum(c) || strchr("!%%+,-./:@^_", c) != NULL)
     {
-      bool is_sequence = false;
-      bool is_pipe = false;
-      bool is_input = false;
-      bool is_output = false;
       char* buffer = (char*) checked_malloc(32*sizeof(char));
       size_t buffer_size = 32;
       size_t buffer_index = 0;
@@ -211,25 +208,20 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
         //tokenize sequence or pipe command
         if (stream[stream_index+1] == ';')
         {
-          is_sequence = true;
-          buffer[++buffer_index] = ';';
-          c = stream[stream_index + 2];
+          //put everything into storage of sequence token
         }
         else if (stream[stream_index+1] == '|')
         {
           //put everything into storage of pipe token
-			is_pipe = true;
         }
         //tokenize input or output "command"
         else if (stream[stream_index+1] == '<')
         {
           //put everything into storage of input token
-			is_input = true;
         }
         else if (stream[stream_index+1] == '>')
         {
           //put everything into storage of output token
-			is_output = true;
         }
       }
       //put everything into storage of simple token
@@ -253,11 +245,16 @@ make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
   /* FIXME */
-  size_t size = 0;
-  //char* stream = stream(get_next_byte,get_next_byte_argument, &size); //malloc'd
-  //token_t* t = tokenize_stream(stream, &size);
+	//testing
+  size_t* size;
+  char* file_stream = stream(get_next_byte,get_next_byte_argument, size); //malloc'd
+  file_stream[0] = 'g';
+  token_t* t = tokenize_stream(file_stream, size);
+  t->storage[0] = 'g';
 
   command_stream_t cmd_stream;
+  cmd_stream->cmd_total = 0;
+  cmd_stream->cmd = NULL;
   return cmd_stream;
 }
 
@@ -265,6 +262,11 @@ command_t
 read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
+	s->cmd_total = 1;
   command_t t;
+  t->input = NULL;
+  t->output = NULL;
+  t->status = -1;
+  t->type = IF_COMMAND;
   return t;
 }
