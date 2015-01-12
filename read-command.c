@@ -43,8 +43,6 @@ enum token_type
     SUBSHELL_TOKEN,    // ( A )
     UNTIL_TOKEN,   // until A do B done
     WHILE_TOKEN,   // while A do B done
-    INPUT_TOKEN, // A < B
-    OUTPUT_TOKEN, // A > B
     HEAD_TOKEN,
   };
 
@@ -57,6 +55,30 @@ struct token
   size_t storage_size;
   token_t* next;
 };
+
+command_t commandFromToken(token_t* token) {
+  command_t cmd = checked_malloc(sizeof(command_t));
+  switch (token->type)
+  {
+    case HEAD_TOKEN:
+      cmd = commandFromToken(token->next);
+      break;
+    case SUBSHELL_TOKEN:
+      cmd->type = SUBSHELL_COMMAND;
+      cmd->u.word = checked_malloc(sizeof(char*));
+      cmd->u.word[0] = token->storage;
+      break;
+    case IF_TOKEN:
+    case PIPE_TOKEN:
+    case SEQUENCE_TOKEN:
+    case SIMPLE_TOKEN:
+    case UNTIL_TOKEN:
+    case WHILE_TOKEN:
+    default:
+      break;
+  }
+  return cmd;
+}
 
 //create a buffer for entire file, stream in all chars.
 char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t* size)
@@ -88,7 +110,7 @@ char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t
 token_t* create_token(enum token_type type, char* storage, size_t size)
 {
   token_t* t = checked_malloc(sizeof(token_t));
-  t->type= type;
+  t->type = type;
   t->storage = storage;
   t->storage_size = size;
   t->next = NULL;
@@ -110,7 +132,9 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
     if (c == '(')
     {
       //ignore whitespace
-      while (stream[stream_index+1] == (' ' || '\n' || '\t'))
+      while (stream[stream_index+1] == ' ' 
+        || stream[stream_index+1] == '\n' 
+        || stream[stream_index+1] == '\t')
       {
         stream_index++;
       }
@@ -194,10 +218,12 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
     //tokenize simple command
     else if (isalnum(c) || strchr("!%%+,-./:@^_", c) != NULL)
     {
+      enum token_type buffer_command_type = SIMPLE_COMMAND;
       char* buffer = (char*) checked_malloc(32*sizeof(char));
       size_t buffer_size = 32;
       size_t buffer_index = 0;
-      while(isalnum(c) || strchr("!%%+,-./:@^_", c) != NULL)
+
+      while (isalnum(c) || strchr("!%%+,-./:@^_<>;| \t", c) != NULL)
       {
         //realloc if buffer_size needs to be increased
         if (buffer_index == buffer_size)
@@ -207,27 +233,67 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
         }
 
         buffer[buffer_index] = c;
+        buffer_index++;
 
         //tokenize sequence or pipe command
-        if (stream[stream_index+1] == ';')
+        if (stream[stream_index + 1] == ';')
         {
           //put everything into storage of sequence token
+          buffer_command_type = SEQUENCE_TOKEN;
+          while (buffer[buffer_index - 1] == ' ' 
+                || buffer[buffer_index - 1] == '\n' 
+                || buffer[buffer_index - 1] == '\t')
+          {
+            buffer_index--;
+          }
+
+          buffer[buffer_index] = stream[++stream_index];
+          buffer_index++;
+
+          while (stream[stream_index + 1] == ' ' 
+                || stream[stream_index + 1] == '\n' 
+                || stream[stream_index + 1] == '\t')
+          {
+            stream_index++;
+          }
         }
-        else if (stream[stream_index+1] == '|')
+        else if (stream[stream_index + 1] == '|')
         {
           //put everything into storage of pipe token
+          buffer_command_type = PIPE_TOKEN;
+          while (buffer[buffer_index - 1] == ' ' 
+                || buffer[buffer_index - 1] == '\n' 
+                || buffer[buffer_index - 1] == '\t')
+          {
+            buffer_index--;
+          }
+
+          buffer[buffer_index] = stream[++stream_index];
+          buffer_index++;
+
+          while (stream[stream_index + 1] == ' ' 
+                || stream[stream_index + 1] == '\n' 
+                || stream[stream_index + 1] == '\t')
+          {
+            stream_index++;
+          }
         }
+
         //tokenize input or output "command"
-        else if (stream[stream_index+1] == '<')
+        if (stream_index < (*stream_size - 1))
         {
-          //put everything into storage of input token
+          c = stream[++stream_index];
         }
-        else if (stream[stream_index+1] == '>')
+        else 
         {
-          //put everything into storage of output token
+          break;
         }
       }
+
       //put everything into storage of simple token
+      current->next = create_token(buffer_command_type, buffer, buffer_index);
+      current = current->next;
+      break;
     }
     //ignore whitespace
 	else if (c == ' ' || c == '\t' || c == '\n')
@@ -257,6 +323,8 @@ make_command_stream (int (*get_next_byte) (void *),
   // t->storage[0] = 'g';
 
   // char test = get_next_byte(get_next_byte_argument);
+
+  command_t command_test = commandFromToken(t);
 
   command_stream_t cmd_stream;
   cmd_stream->cmd_total = 0;
