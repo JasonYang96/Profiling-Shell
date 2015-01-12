@@ -7,7 +7,7 @@ g++ -c foo.c
 if cat < /etc/passwd | tr a-z A-Z | sort -u; then :; else echo sort failed!; fi
 
 a b<c > d
-
+	
 if cat < /etc/passwd | tr a-z A-Z | sort -u > out
 then :
 else echo sort failed!

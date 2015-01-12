@@ -123,8 +123,6 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
       while (open_counter > 0)
       {
         //put everything until ) into storage of subshell token
-        stream[++stream_index] = c;
-
         if (c == '(')
         {
           open_counter++;
@@ -135,11 +133,15 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
           //make subshell token if final closed parentheses
           if (open_counter == 0)
           {
-            current->next = create_token(SUBSHELL_TOKEN, buffer, buffer_index - 1);
+            current->next = create_token(SUBSHELL_TOKEN, buffer, buffer_index);
             current = current->next;
+            break;
           }
         }
-        buffer[buffer_index++] = c;
+        buffer[buffer_index] = c;
+        buffer_index++;
+
+        c = stream[++stream_index];
         //realloc if buffer_size needs to be increased
         if (buffer_index == buffer_size)
         {
@@ -149,7 +151,7 @@ token_t* tokenize_stream(char* stream, size_t* stream_size)
       }
     }
     //tokenize if command
-    if (c == 'i' && stream[stream_index+1] == 'f'
+    else if (c == 'i' && stream[stream_index+1] == 'f'
       && (stream[stream_index+2] == ' ' || stream[stream_index+2] == '\n'))
     {
       stream_index += 3;
