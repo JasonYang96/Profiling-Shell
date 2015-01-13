@@ -444,15 +444,19 @@ make_command_stream (int (*get_next_byte) (void *),
   char* stream_tokenized = strtok(file_stream, "\n\n");
 
   command_t cmd;
-  command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
+  command_stream_t cmd_stream = (command_stream_t*)checked_malloc(sizeof(command_stream_t));
   command_stream_t current = cmd_stream;
 
   // Loop through command trees
   while (stream_tokenized != NULL)
   {
     size_t length = strlen(stream_tokenized);
-    current->cmd = commandize_stream(file_stream, &length);
+    current->cmd = commandize_stream(stream_tokenized, &length);
+    current->next = (command_stream_t*) checked_malloc(sizeof(command_stream_t));
     current = current->next;
+
+    // Split file_stream along double newlines
+    char* stream_tokenized = strtok(file_stream, "\n\n");
   }
 
   return cmd_stream;
