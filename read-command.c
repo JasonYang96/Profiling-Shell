@@ -129,6 +129,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
           if (open_counter == 0)
           {
             cmd = create_command(SUBSHELL_COMMAND, buffer, buffer_index, "", "");
+            cmd->u.command[0] = commandize_stream(cmd->storage, &cmd->storage_size);
             break;
           }
         }
@@ -425,7 +426,6 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       //output error message
     }
   }
-  cmd->u.command[0] = commandize_stream(cmd->storage, &cmd->storage_size);
   return cmd;
 }
 
