@@ -31,6 +31,7 @@
 struct command_stream {
   command_t* cmd;
   int cmd_total;
+  struct command_stream* next;
 };
 
 //create a buffer for entire file, stream in all chars.
@@ -443,18 +444,22 @@ make_command_stream (int (*get_next_byte) (void *),
   char* stream_tokenized = strtok(file_stream, "\n\n");
 
   command_t cmd;
+  command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
+  command_stream_t current = cmd_stream;
 
   // Loop through command trees
   while (stream_tokenized != NULL)
   {
     size_t length = strlen(stream_tokenized);
     cmd = commandize_stream(file_stream, &length);
+
+    current->cmd_total++;
+    current->cmd = &cmd;
+    current = current->next;
+    
     stream_tokenized = strtok(NULL, "\n\n");
   }
 
-  command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
-  cmd_stream->cmd_total = 0;
-  cmd_stream->cmd = &cmd;
   return cmd_stream;
 }
 
