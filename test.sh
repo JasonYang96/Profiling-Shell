@@ -1,1 +1,3 @@
-(true)
+while a
+do b
+done

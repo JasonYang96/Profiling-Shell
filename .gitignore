@@ -41,3 +41,14 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+test-t-ok.sh-24846.tmp
+
+# Files
+diffout.txt
+test.sh
+profsh
+test.err
+test.exp
+test.out
+testsh
+check-dist
