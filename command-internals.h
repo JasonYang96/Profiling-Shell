@@ -38,6 +38,9 @@ struct command
   char *input;
   char *output;
 
+  char *storage;
+  int storage_size;
+
   union
   {
     // For SIMPLE_COMMAND.
