@@ -421,7 +421,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       //skip whitespace
     }
     //don't recognize char
-    else
+  else
     {
       //output error message
     }
@@ -438,7 +438,19 @@ make_command_stream (int (*get_next_byte) (void *),
   size_t init = 0;
   size_t* size = &init;
   char* file_stream = stream(get_next_byte,get_next_byte_argument, size); //malloc'd
-  command_t cmd = commandize_stream(file_stream, size);
+
+  // Split file_stream along double newlines
+  char* stream_tokenized = strtok(file_stream, "\n\n");
+
+  command_t cmd;
+
+  // Loop through command trees
+  while (stream_tokenized != NULL)
+  {
+    size_t length = strlen(stream_tokenized);
+    cmd = commandize_stream(file_stream, &length);
+    stream_tokenized = strtok(NULL, "\n\n");
+  }
 
   command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
   cmd_stream->cmd_total = 0;
