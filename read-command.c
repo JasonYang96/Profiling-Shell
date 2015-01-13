@@ -60,14 +60,27 @@ char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t
 }
 
 //creating new commands
-command_t create_command(enum command_type type, char* storage, size_t size, char* input, char* output)
+command_t create_command(enum command_type type, char* storage_input, size_t size, char* input, char* output)
 {
   command_t cmd = checked_malloc(sizeof(command_t));
-  cmd->type = type;
-  cmd->storage = storage;
-  cmd->storage_size = size;
-  cmd->input = input;
-  cmd->output = output;
+  if (type == SIMPLE_COMMAND)
+  {
+    cmd->type = type;
+    cmd->storage = "";
+    cmd->storage_size = 0;
+    cmd->output = output;
+    cmd->input = input;
+    cmd->u.word = checked_malloc(32 * sizeof(char*));
+    cmd->u.word[0] = storage_input;
+  }
+  else
+  {
+    cmd->type = type;
+    cmd->storage = storage_input;
+    cmd->storage_size = size;
+    cmd->input = input;
+    cmd->output = output;
+  }
   return cmd;
 }
 
@@ -243,9 +256,10 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 
       //put everything into storage of simple token
       cmd = create_command(buffer_command_type, buffer, buffer_index, "", "");
-      break;
+      return cmd;
     }
-    //ignore whitespace
+    //ignore whitespace}
+
 	else if (c == ' ' || c == '\t' || c == '\n')
     {
       //skip whitespace
@@ -256,6 +270,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       //output error message
     }
   }
+  cmd->u.command[0] = commandize_stream(cmd->storage, &cmd->storage_size);
   return cmd;
 }
 

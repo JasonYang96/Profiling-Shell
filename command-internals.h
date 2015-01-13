@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <stddef.h>
+
 enum command_type
   {
     IF_COMMAND,		 // if A then B else C fi
@@ -39,7 +41,7 @@ struct command
   char *output;
 
   char *storage;
-  int storage_size;
+  size_t storage_size;
 
   union
   {
