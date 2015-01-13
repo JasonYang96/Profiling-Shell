@@ -66,22 +66,26 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
   if (type == SIMPLE_COMMAND)
   {
     cmd->type = type;
+    cmd->storage = checked_malloc(sizeof(char));
     cmd->storage = "";
     cmd->storage_size = 0;
+    cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
     cmd->output = output;
+    cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
     cmd->input = input;
-    cmd->u.word = checked_malloc(sizeof(char**));
+    cmd->u.word = checked_malloc((size + 1) * sizeof(char));
     cmd->u.word[0] = storage_input;
   }
   else
   {
     cmd->type = type;
-    // cmd->storage = checked_malloc(size * sizeof(char));
-    // strcpy(cmd->storage, storage_input);
+    cmd->storage = checked_malloc((size + 1) * sizeof(char));
     cmd->storage = storage_input;
     cmd->storage_size = size;
-    cmd->input = input;
+    cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
     cmd->output = output;
+    cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
+    cmd->input = input;
   }
   return cmd;
 }
