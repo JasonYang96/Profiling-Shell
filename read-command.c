@@ -451,13 +451,8 @@ make_command_stream (int (*get_next_byte) (void *),
   while (stream_tokenized != NULL)
   {
     size_t length = strlen(stream_tokenized);
-    cmd = commandize_stream(file_stream, &length);
-
-    current->cmd_total++;
-    current->cmd = &cmd;
+    current->cmd = commandize_stream(file_stream, &length);
     current = current->next;
-    
-    stream_tokenized = strtok(NULL, "\n\n");
   }
 
   return cmd_stream;
