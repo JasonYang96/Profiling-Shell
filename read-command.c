@@ -755,7 +755,14 @@ read_command_stream (command_stream_t* cmd_stream)
 {
   /* FIXME: Replace this with your implementation too.  */
 	command_t cmd = checked_malloc(sizeof(command_t));
+  if (*cmd_stream)
+  {  
   cmd = *((*cmd_stream)->cmd);
-  cmd_stream = &((*cmd_stream)->next);
+  *cmd_stream = (*cmd_stream)->next;
+  }
+  else 
+  {
+    return NULL;
+  }
   return cmd;
 }
