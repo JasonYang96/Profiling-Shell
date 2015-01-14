@@ -70,10 +70,24 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
     cmd->storage = checked_malloc(sizeof(char));
     cmd->storage = "";
     cmd->storage_size = 0;
-    cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-    strcpy(cmd->output, output);
-    cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-    strcpy(cmd->input, input);
+    if (output != NULL)
+    {
+      cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
+      strcpy(cmd->output, output);
+    }
+    else 
+    {
+      cmd->output = NULL;
+    }
+    if (input != NULL)
+    {
+      cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
+      strcpy(cmd->input, input);
+    }
+    else 
+    {
+      cmd->input = NULL;
+    }
     cmd->u.word = checked_malloc(sizeof(char*));
     cmd->u.word[0] = checked_malloc(size * sizeof(char));
     strncpy(cmd->u.word[0], storage_input, size);
@@ -85,10 +99,24 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
     // strncpy(cmd->storage, storage_input, size);
     cmd->storage = storage_input;
     cmd->storage_size = size;
-    cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-    strcpy(cmd->output, output);
-    cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-    strcpy(cmd->input, input);
+    if (output != NULL)
+    {
+      cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
+      strcpy(cmd->output, output);
+    }
+    else 
+    {
+      cmd->output = NULL;
+    }
+    if (input != NULL)
+    {
+      cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
+      strcpy(cmd->input, input);
+    }
+    else 
+    {
+      cmd->input = NULL;
+    }
   }
   return cmd;
 }
@@ -131,7 +159,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
           //make subshell token if final closed parentheses
           if (open_counter == 0)
           {
-            cmd = create_command(SUBSHELL_COMMAND, buffer, buffer_index, "", "");
+            cmd = create_command(SUBSHELL_COMMAND, buffer, buffer_index, NULL, NULL);
             cmd->u.command[0] = commandize_stream(cmd->storage, &cmd->storage_size);
             break;
           }
@@ -187,7 +215,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 				if_counter--;
 				if (if_counter == 0)
 				{
-					cmd = create_command(IF_COMMAND, buffer, buffer_index, "", "");
+					cmd = create_command(IF_COMMAND, buffer, buffer_index, NULL, NULL);
 
 					//setting up command[0]
 					char* buffer_A = checked_malloc(buffer_size * sizeof(char));
@@ -352,7 +380,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 				until_counter--;
 				if (until_counter == 0)
 				{
-					cmd = create_command(UNTIL_COMMAND, buffer, buffer_index, "", "");
+					cmd = create_command(UNTIL_COMMAND, buffer, buffer_index, NULL, NULL);
 					
 					//setting up command[0]
 					char* buffer_A = checked_malloc(buffer_size * sizeof(char));
@@ -490,7 +518,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         while_counter--;
 		if (while_counter == 0)
 		{
-			cmd = create_command(WHILE_COMMAND, buffer, buffer_index, "", "");
+			cmd = create_command(WHILE_COMMAND, buffer, buffer_index, NULL, NULL);
 			//setting up command[0]
 			char* buffer_A = checked_malloc(buffer_size * sizeof(char));
 			size_t buffer_A_index = 0;
@@ -656,15 +684,15 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       {
         char* redirect_buffer = buffer;
 
-        cmd = create_command(SIMPLE_COMMAND, redirect_buffer, buffer_index, "", "");
+        cmd = create_command(SIMPLE_COMMAND, redirect_buffer, buffer_index, NULL, NULL);
       }
       else if (buffer_command_type == SEQUENCE_COMMAND)
       {
-        cmd = create_command(SEQUENCE_COMMAND, buffer, buffer_index, "", "");
+        cmd = create_command(SEQUENCE_COMMAND, buffer, buffer_index, NULL, NULL);
       }
       else 
       {
-        cmd = create_command(PIPE_COMMAND, buffer, buffer_index, "", "");
+        cmd = create_command(PIPE_COMMAND, buffer, buffer_index, NULL, NULL);
       }
 
       return cmd;
@@ -700,6 +728,7 @@ make_command_stream (int (*get_next_byte) (void *),
   command_t cmd_temp = commandize_stream(file_stream, size);
   command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
   cmd_stream->cmd = &cmd_temp;
+  cmd_stream->next = NULL;
 
   /*
   command_stream_t current = cmd_stream;
@@ -722,14 +751,11 @@ make_command_stream (int (*get_next_byte) (void *),
 }
 
 command_t
-read_command_stream (command_stream_t s)
+read_command_stream (command_stream_t cmd_stream)
 {
   /* FIXME: Replace this with your implementation too.  */
-	s->cmd_total = 1;
-  command_t t = checked_malloc(sizeof(command_t));
-  t->input = NULL;
-  t->output = NULL;
-  t->status = -1;
-  t->type = IF_COMMAND;
-  return t;
+	command_t cmd = checked_malloc(sizeof(command_t));
+  cmd = *(cmd_stream->cmd);
+  cmd_stream = cmd_stream->next;
+  return cmd;
 }
