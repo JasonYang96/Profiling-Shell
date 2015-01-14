@@ -71,29 +71,31 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
     cmd->storage = "";
     cmd->storage_size = 0;
     cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-    cmd->output = output;
+    strcpy(cmd->output, output);
     cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-    cmd->input = input;
-    cmd->u.word = checked_malloc((size + 1) * sizeof(char));
-    cmd->u.word[0] = storage_input;
+    strcpy(cmd->input, input);
+    cmd->u.word = checked_malloc(sizeof(char*));
+    cmd->u.word[0] = checked_malloc(size * sizeof(char));
+    strncpy(cmd->u.word[0], storage_input, size);
   }
   else
   {
     cmd->type = type;
     cmd->storage = checked_malloc((size + 1) * sizeof(char));
+    // strncpy(cmd->storage, storage_input, size);
     cmd->storage = storage_input;
     cmd->storage_size = size;
     cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-    cmd->output = output;
+    strcpy(cmd->output, output);
     cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-    cmd->input = input;
+    strcpy(cmd->input, input);
   }
   return cmd;
 }
 
 command_t commandize_stream(char* stream, size_t* stream_size)
 {
-  command_t cmd = checked_malloc(sizeof(command_t));
+  command_t cmd;
 
   size_t stream_index;
   for(stream_index = 0; stream_index < *stream_size; stream_index++)
@@ -504,7 +506,21 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       }
 
       //put everything into storage of simple token
-      cmd = create_command(buffer_command_type, buffer, buffer_index, "", "");
+      if (buffer_command_type == SIMPLE_COMMAND) 
+      {
+        char* redirect_buffer = buffer;
+
+        cmd = create_command(SIMPLE_COMMAND, redirect_buffer, buffer_index, "", "");
+      }
+      else if (buffer_command_type == SEQUENCE_COMMAND)
+      {
+        cmd = create_command(SEQUENCE_COMMAND, buffer, buffer_index, "", "");
+      }
+      else 
+      {
+        cmd = create_command(PIPE_COMMAND, buffer, buffer_index, "", "");
+      }
+
       return cmd;
     }
     //ignore whitespace}
@@ -548,7 +564,7 @@ make_command_stream (int (*get_next_byte) (void *),
     current = current->next;
 
     // Split file_stream along double newlines
-    stream_tokenized = strtok(file_stream, "\n\n");
+    stream_tokenized = strtok(NULL, "\n\n");
   }
 
   return cmd_stream;
