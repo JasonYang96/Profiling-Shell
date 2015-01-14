@@ -273,15 +273,17 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 		  }
 
 		  //setting up command[2]
+      a = buffer[index];
 		  char* buffer_C = checked_malloc(buffer_size * sizeof(char));
 		  size_t buffer_C_index = 0;
 		  while (index < buffer_index + 1)
 		  {
 			  buffer_C[buffer_C_index++] = a;
-			  a = buffer[index++];
+			  a = buffer[++index];
 		  }
 
 		  cmd->u.command[2] = commandize_stream(buffer_C, &buffer_C_index);
+      stream_index += 2;
 
           break;
         }
