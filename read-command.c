@@ -410,7 +410,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 						index++;
 					}
 
-					break;
+					// break;
 
 					//setting up command[1]
 					char* buffer_B = checked_malloc(buffer_size * sizeof(char));
@@ -547,7 +547,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 				index++;
 			}
 
-			break;
+			// break;
 
 			//setting up command[1]
 			char* buffer_B = checked_malloc(buffer_size * sizeof(char));

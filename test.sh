@@ -1,4 +1,3 @@
-if A
-then B
-else C
-fi
+until A
+do B
+done
