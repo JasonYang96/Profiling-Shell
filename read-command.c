@@ -82,7 +82,8 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
   {
     cmd->type = type;
     cmd->storage = checked_malloc((size + 1) * sizeof(char));
-    strncpy(cmd->storage, storage_input, size);
+    // strncpy(cmd->storage, storage_input, size);
+    cmd->storage = storage_input;
     cmd->storage_size = size;
     cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
     strcpy(cmd->output, output);
@@ -94,7 +95,7 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
 
 command_t commandize_stream(char* stream, size_t* stream_size)
 {
-  command_t cmd = checked_malloc(sizeof(command_t));
+  command_t cmd;
 
   size_t stream_index;
   for(stream_index = 0; stream_index < *stream_size; stream_index++)
