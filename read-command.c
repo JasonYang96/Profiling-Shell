@@ -751,11 +751,11 @@ make_command_stream (int (*get_next_byte) (void *),
 }
 
 command_t
-read_command_stream (command_stream_t cmd_stream)
+read_command_stream (command_stream_t* cmd_stream)
 {
   /* FIXME: Replace this with your implementation too.  */
 	command_t cmd = checked_malloc(sizeof(command_t));
-  cmd = *(cmd_stream->cmd);
-  cmd_stream = cmd_stream->next;
+  cmd = *((*cmd_stream)->cmd);
+  cmd_stream = &((*cmd_stream)->next);
   return cmd;
 }
