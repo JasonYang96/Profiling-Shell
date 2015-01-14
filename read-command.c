@@ -71,9 +71,9 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
     cmd->storage = "";
     cmd->storage_size = 0;
     cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-    cmd->output = output;
+    strcpy(cmd->output, output);
     cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-    cmd->input = input;
+    strcpy(cmd->input, input);
     cmd->u.word = checked_malloc(sizeof(char*));
     cmd->u.word[0] = checked_malloc(size * sizeof(char));
     strncpy(cmd->u.word[0], storage_input, size);
@@ -81,13 +81,13 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
   else
   {
     cmd->type = type;
-    cmd->storage = checked_malloc((size + 1) * sizeof(char));
-    cmd->storage = storage_input;
+    cmd->storage = checked_malloc(size * sizeof(char));
+    strncpy(cmd->storage, storage_input, size);
     cmd->storage_size = size;
     cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-    cmd->output = output;
+    strcpy(cmd->output, output);
     cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-    cmd->input = input;
+    strcpy(cmd->input, input);
   }
   return cmd;
 }
