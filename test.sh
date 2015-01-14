@@ -1,5 +1,4 @@
-(true)
-
-(false)
-
-(true)
+if A
+then B
+else C
+fi
