@@ -81,7 +81,7 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
   else
   {
     cmd->type = type;
-    cmd->storage = checked_malloc(size * sizeof(char));
+    cmd->storage = checked_malloc((size + 1) * sizeof(char));
     strncpy(cmd->storage, storage_input, size);
     cmd->storage_size = size;
     cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
