@@ -649,7 +649,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 			  //realloc if buffer_size needs to be increased
 			  if (buffer_index == buffer_size)
 			  {
-				  buffer = (char *)checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+				  checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
 				  buffer_size += 32;
 			  }
 
@@ -699,8 +699,10 @@ command_t commandize_stream(char* stream, size_t* stream_size)
            			 c = stream[++stream_index];
 				  }
 			  }
-			  
+
 			  //tokenize input or output "command"
+			  
+			  //increment c
 			  if (stream_index < *stream_size)
 			  {
 				  c = stream[++stream_index];
@@ -715,7 +717,6 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 		  if (buffer_command_type == SIMPLE_COMMAND)
 		  {
 			  cmd = create_command(SIMPLE_COMMAND, buffer, buffer_index, NULL, NULL);
-			  // cmd->u.command[0] = commandize_stream(buffer, &buffer_index);
 		  }
 		  else if (buffer_command_type == SEQUENCE_COMMAND)
 		  {
@@ -752,35 +753,16 @@ make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
 {
   /* FIXME */
-	//testing
   size_t init = 0;
   size_t* size = &init;
-  char* file_stream = stream(get_next_byte,get_next_byte_argument, size); //malloc'd
+  char* file_stream = stream(get_next_byte,get_next_byte_argument, size);
 
   // Split file_stream along double newlines
-  // char* stream_tokenized = strtok(file_stream, "\n\n");
 
   command_t cmd_temp = commandize_stream(file_stream, size);
   command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
   cmd_stream->cmd = &cmd_temp;
   cmd_stream->next = NULL;
-
-  /*
-  command_stream_t current = cmd_stream;
-
-  // Loop through command trees
-  while (stream_tokenized != NULL)
-  {
-    size_t length = strlen(stream_tokenized);
-    command_t cmd_temp = commandize_stream(stream_tokenized, &length);
-    current->cmd = &cmd_temp;
-    current->next = checked_malloc(sizeof(command_stream_t));
-    current = current->next;
-
-    // Split file_stream along double newlines
-    stream_tokenized = strtok(NULL, "\n\n");
-  } 
-  */
 
   return cmd_stream;
 }

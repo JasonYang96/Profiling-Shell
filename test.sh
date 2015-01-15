@@ -8,7 +8,7 @@ do
 			if Elsa
 			then Francine
 			else 
-				Gregory | Harry | Irene | Jacob | Kenny
+				ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF
 			fi
 		fi
 	done
