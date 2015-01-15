@@ -63,7 +63,7 @@ char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t
 //creating new commands
 command_t create_command(enum command_type type, char* storage_input, size_t size, char* input, char* output)
 {
-  command_t cmd = checked_malloc(sizeof(command_t));
+  command_t cmd = checked_malloc(sizeof(struct command));
   if (type == SIMPLE_COMMAND)
   {
     cmd->type = type;
@@ -754,7 +754,7 @@ command_t
 read_command_stream (command_stream_t* cmd_stream)
 {
   /* FIXME: Replace this with your implementation too.  */
-	command_t cmd = checked_malloc(sizeof(command_t));
+	command_t cmd = checked_malloc(sizeof(struct command));
   if (*cmd_stream)
   {  
   cmd = *((*cmd_stream)->cmd);
