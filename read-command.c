@@ -629,8 +629,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 			  buffer_index++;
 
 			  //tokenize sequence or pipe command
-			  if (stream[stream_index + 1] == ';' ||
-				  stream[stream_index + 1] == '|')
+			  if (stream[stream_index + 1] == ';' || stream[stream_index + 1] == '|')
 			  {
 				  if (stream[stream_index + 1] == ';')
 				  {
@@ -648,39 +647,33 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 					  buffer_index--;
 				  }
 
-				  if (buffer_A_index == 0)
-				  {
-					  buffer_A = buffer;
-					  buffer_A_index = buffer_index;
-				  }
-				  else
-				  {
-					  //create a ; or | command and continue parsing
-				  }
+				  strncpy(buffer_A, buffer, buffer_index);
+				  buffer_A_index = buffer_index;
 
-				  buffer[buffer_index] = stream[++stream_index];
+          stream_index += 2;
+
+				  c = stream[stream_index];
 				  buffer_index++;
 
-				  while (stream[stream_index + 1] == ' '
-					  || stream[stream_index + 1] == '\n'
-					  || stream[stream_index + 1] == '\t')
+				  while (stream[stream_index] == ' '
+					  || stream[stream_index] == '\n'
+					  || stream[stream_index] == '\t')
 				  {
 					  stream_index++;
 				  }
 
-				  c = stream[stream_index];
+          c = stream[stream_index];
 
-				  while ((c != '\n' && stream[stream_index + 1] != '\n') ||
-					  stream[stream_index + 1] != ';' ||
-					  stream[stream_index + 1] != '|')
+				  while (stream_index < *stream_size)
 				  {
 					  buffer_B[buffer_B_index] = c;
 					  buffer_B_index++;
+            c = stream[++stream_index];
 				  }
 			  }
 			  
 			  //tokenize input or output "command"
-			  if (stream_index < (*stream_size - 1))
+			  if (stream_index < *stream_size)
 			  {
 				  c = stream[++stream_index];
 			  }
@@ -694,19 +687,19 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 		  if (buffer_command_type == SIMPLE_COMMAND)
 		  {
 			  cmd = create_command(SIMPLE_COMMAND, buffer, buffer_index, NULL, NULL);
-			  cmd->u.command[0] = commandize_stream(buffer, buffer_index);
+			  // cmd->u.command[0] = commandize_stream(buffer, &buffer_index);
 		  }
 		  else if (buffer_command_type == SEQUENCE_COMMAND)
 		  {
 			  cmd = create_command(SEQUENCE_COMMAND, buffer, buffer_index, NULL, NULL);
-			  cmd->u.command[0] = commandize_stream(buffer_A, buffer_A_index);
-			  cmd->u.command[1] = commandize_stream(buffer_B, buffer_B_index);
+			  cmd->u.command[0] = commandize_stream(buffer_A, &buffer_A_index);
+			  cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
 		  }
 		  else
 		  {
 			  cmd = create_command(PIPE_COMMAND, buffer, buffer_index, NULL, NULL);
-			  cmd->u.command[0] = commandize_stream(buffer_A, buffer_A_index);
-			  cmd->u.command[1] = commandize_stream(buffer_B, buffer_B_index);
+			  cmd->u.command[0] = commandize_stream(buffer_A, &buffer_A_index);
+			  cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
 		  }
 
       return cmd;

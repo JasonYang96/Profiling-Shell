@@ -1,3 +1,1 @@
-until A
-do B
-done
+A ; B
