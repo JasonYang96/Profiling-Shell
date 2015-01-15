@@ -3,12 +3,12 @@ do
 	until Button
 	do 
 		if Carl
-		then David
+		then (David)
 		else 
 			if Elsa
 			then Francine
 			else 
-				Gregory ; Harry
+				Gregory | Harry | Irene | Jacob | Kenny
 			fi
 		fi
 	done

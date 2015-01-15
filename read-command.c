@@ -678,7 +678,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 				  strncpy(buffer_A, buffer, buffer_index);
 				  buffer_A_index = buffer_index;
 
-          stream_index += 2;
+         		  stream_index += 2;
 
 				  c = stream[stream_index];
 				  buffer_index++;
@@ -690,13 +690,13 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 					  stream_index++;
 				  }
 
-          c = stream[stream_index];
+         			c = stream[stream_index];
 
 				  while (stream_index < *stream_size)
 				  {
 					  buffer_B[buffer_B_index] = c;
 					  buffer_B_index++;
-            c = stream[++stream_index];
+           			 c = stream[++stream_index];
 				  }
 			  }
 			  
