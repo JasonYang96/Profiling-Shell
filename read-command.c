@@ -34,8 +34,6 @@ struct command_stream {
   struct command_stream* next;
 };
 
-//testing
-
 //create a buffer for entire file, stream in all chars.
 char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t* size)
 {
