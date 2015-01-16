@@ -168,28 +168,50 @@ command_t commandize_stream(char** stream, size_t* stream_size)
       {
         cmd = create_command(SUBSHELL_COMMAND, buffer, buffer_index, NULL, NULL);
         cmd->u.command[0] = commandize_stream(&cmd->storage, &cmd->storage_size);
-        if (command_counter == 0)
-        {
-      if (stream_index <= *stream_size)
-      {
-      stream_index++;
-      while ((*stream)[stream_index] == ' '
-        || (*stream)[stream_index] == '\t'
-        || (*stream)[stream_index] == '\n')
-      {
-        stream_index++;
-      }
-      *stream += stream_index;
-        *stream_size -= stream_index;
-      }
-      else
-      {
-        *stream = "";
-        stream_size -= stream_index;
-      }
-      
-          return cmd;
-        }
+		if (command_counter == 0)
+		{
+			if (stream_index <= *stream_size)
+			{
+				stream_index++;
+				while ((*stream)[stream_index] == ' '
+					|| (*stream)[stream_index] == '\t'
+					|| (*stream)[stream_index] == '\n')
+				{
+					stream_index++;
+				}
+
+				if ((*stream)[stream_index + 1] == '|' ||
+					(*stream)[stream_index + 1] == ';')
+				{
+					enum command_type type;
+					if ((*stream)[stream_index + 1] == '|')
+					{
+						type = PIPE_COMMAND;
+					}
+					else
+					{
+						type = SEQUENCE_COMMAND;
+					}
+					command_t cmd_tmp = checked_malloc(sizeof(command_t));
+					cmd_tmp = cmd;
+					cmd = create_command(type, buffer, buffer_index, NULL, NULL);
+					cmd->u.command[0] = cmd_tmp;
+					stream_index++;
+					*stream += stream_index;
+					*stream_size -= stream_index;
+					cmd->u.command[1] = commandize_stream(stream, stream_size);
+				}
+				*stream += stream_index;
+				*stream_size -= stream_index;
+
+			}
+			else
+			{
+				*stream = "";
+				stream_size -= stream_index;
+			}
+			return cmd;
+		}
         else
         {
           break;
@@ -749,14 +771,16 @@ command_t commandize_stream(char** stream, size_t* stream_size)
   // tokenize simple command
     else if (isalnum(c) || strchr("!%%+,-./:@^_", c) != NULL)
     {
-      enum command_type buffer_command_type = SIMPLE_COMMAND;
       char* buffer = (char*)checked_malloc(32 * sizeof(char));
-      char* buffer_A = (char*)checked_malloc(32 * sizeof(char));
-      char* buffer_B = (char*)checked_malloc(32 * sizeof(char));
+	  size_t buffer_index = 0;
       size_t buffer_size = 32;
-      size_t buffer_index = 0;
-      size_t buffer_A_index = 0;
-      size_t buffer_B_index = 0;
+	  char* buffer_redirect = (char*)checked_malloc(32 * sizeof(char));
+	  size_t buffer_r_index = 0;
+	  size_t buffer_r_size = 32;
+	  char* input = NULL;
+	  char* output = NULL;
+	  int is_input = 0;
+	  int is_output = 0;
 
       while (isalnum(c) || strchr("!%%+,-./:@^_ ", c) != NULL)
       {
@@ -770,80 +794,77 @@ command_t commandize_stream(char** stream, size_t* stream_size)
         buffer[buffer_index] = c;
         buffer_index++;
 
-        //tokenize sequence or pipe command
-        if ((*stream)[stream_index + 1] == ';' || (*stream)[stream_index + 1] == '|')
-        {
-          if ((*stream)[stream_index + 1] == ';')
-          {
-            buffer_command_type = SEQUENCE_COMMAND;
-          }
-          else
-          {
-            buffer_command_type = PIPE_COMMAND;
-          }
-          //put everything into storage of command
-          while (buffer[buffer_index - 1] == ' '
-            || buffer[buffer_index - 1] == '\n'
-            || buffer[buffer_index - 1] == '\t')
-          {
-            buffer_index--;
-          }
+		//parse redirections
+		if ((*stream)[stream_index + 1] == '<' || (*stream)[stream_index + 1] == '>')
+		{
+			stream_index++;
+			if ((*stream)[stream_index] == '<')
+			{
+				is_input = 1;
+			}
+			else
+			{
+				is_output = 1;
+			}
+			stream_index++;
 
-          strncpy(buffer_A, buffer, buffer_index);
-          buffer_A_index = buffer_index;
+			// get rid of initial whitespace characters (excluding newline characters)
+			while ((*stream)[stream_index] == ' '
+				|| (*stream)[stream_index] == '\t')
+			{
+				stream_index++;
+			}
 
-          stream_index += 2;
+			c = (*stream)[stream_index];
 
-          c = (*stream)[stream_index];
-          buffer_index++;
+			//put succeeding (normal) characters into code
+			while (stream_index < *stream_size
+				&& (isalnum(c)
+				|| strchr("!%%+,-./:@^_ ", c) != NULL))
+			{
+				buffer_redirect[buffer_r_index] = c;
+				buffer_r_index++;
 
-          while ((*stream)[stream_index] == ' '
-            || (*stream)[stream_index] == '\n'
-            || (*stream)[stream_index] == '\t')
-          {
-            stream_index++;
-          }
+				if (buffer_r_index == buffer_r_size - 1)
+				{
+					buffer_redirect = checked_realloc(buffer_redirect, (32 + buffer_r_size)*sizeof(char*));
+					buffer_r_size += 32;
+				}
+				c = (*stream)[++stream_index];
+			}
 
-          c = (*stream)[stream_index];
+			input = checked_malloc(strlen(buffer_redirect + 1) * sizeof(char));
+			output = checked_malloc(strlen(buffer_redirect + 1) * sizeof(char));
+			if (is_input == 1)
+			{
+				strcpy(input, buffer_redirect);
+			}
+			else
+			{
+				strcpy(output, buffer_redirect);
+			}
+			//if (stream[stream_index] == '\n')
+			//{
+			//	//ERROR
+			//	//exit
+			//}
+			break;
+		}
 
-          while (stream_index < *stream_size)
-          {
-            buffer_B[buffer_B_index] = c;
-            buffer_B_index++;
-           c = (*stream)[++stream_index];
-          }
-        }
-
-        //tokenize input or output "command"
-        
-        //increment c
-        if (stream_index < *stream_size)
-        {
-          c = (*stream)[++stream_index];
-        }
-        else
-        {
-          break;
-        }
+		//increment c
+		if (stream_index < *stream_size)
+		{
+			c = (*stream)[++stream_index];
+		}
+		else
+		{
+			break;
+		}
       }
+
 
       //put everything into storage of simple token
-      if (buffer_command_type == SIMPLE_COMMAND)
-      {
-        cmd = create_command(SIMPLE_COMMAND, buffer, buffer_index, NULL, NULL);
-      }
-      else if (buffer_command_type == SEQUENCE_COMMAND)
-      {
-        cmd = create_command(SEQUENCE_COMMAND, buffer, buffer_index, NULL, NULL);
-        cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
-        cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
-      }
-      else
-      {
-        cmd = create_command(PIPE_COMMAND, buffer, buffer_index, NULL, NULL);
-        cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
-        cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
-      }
+	  cmd = create_command(SIMPLE_COMMAND, buffer, buffer_index, input, output);
 
 	  if (command_counter == 0)
 	  {
@@ -864,8 +885,7 @@ command_t commandize_stream(char** stream, size_t* stream_size)
 	  }
 	  return cmd;
   }
-  //ignore whitespace}
-
+  //ignore whitespace
   else if (c == ' ' || c == '\t' || c == '\n')
   {
     stream_index++;
@@ -900,9 +920,6 @@ make_command_stream (int (*get_next_byte) (void *),
     }
     stream->cmd[stream->cmd_total++] = commandize_stream(&file_stream, size);
   }
-  //command_t cmd_temp = commandize_stream(file_stream, size);
-  //cmd_stream->cmd = &cmd_temp;
-  //cmd_stream->next = NULL;
 
   return stream;
 }
