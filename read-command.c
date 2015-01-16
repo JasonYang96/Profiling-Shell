@@ -47,7 +47,7 @@ char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t
   //realloc if buffer_size needs to be increased
   if (count == buffer_size)
   {
-    checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+    buffer = checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
     buffer_size += 32;
   }
   buffer[count] = c;
@@ -124,6 +124,7 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
 command_t commandize_stream(char* stream, size_t* stream_size)
 {
   command_t cmd;
+  int command_counter = 0;
 
   size_t stream_index;
   for(stream_index = 0; stream_index < *stream_size; stream_index++)
@@ -133,6 +134,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
   //tokenize subshell command
   if (c == '(')
   {
+    command_counter++;
     //ignore whitespace
     while (stream[stream_index+1] == ' ' 
     || stream[stream_index+1] == '\n' 
@@ -152,16 +154,25 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     if (c == '(')
     {
       open_counter++;
+      command_counter++;
     }
     else if (c == ')')
     {
       open_counter--;
+      command_counter--;
       //make subshell token if final closed parentheses
       if (open_counter == 0)
       {
-      cmd = create_command(SUBSHELL_COMMAND, buffer, buffer_index, NULL, NULL);
-      cmd->u.command[0] = commandize_stream(cmd->storage, &cmd->storage_size);
-      break;
+        cmd = create_command(SUBSHELL_COMMAND, buffer, buffer_index, NULL, NULL);
+        cmd->u.command[0] = commandize_stream(cmd->storage, &cmd->storage_size);
+        if (command_counter == 0)
+        {
+          return cmd;
+        }
+        else
+        {
+          break;
+        }
       }
     }
     buffer[buffer_index] = c;
@@ -171,7 +182,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     //realloc if buffer_size needs to be increased
     if (buffer_index == buffer_size)
     {
-      checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+      buffer = checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
       buffer_size += 32;
     }
     }
@@ -182,6 +193,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     || stream[stream_index + 2] == '\n'
     || stream[stream_index + 2] == '\t'))
   {
+    command_counter++;
     stream_index += 3;
     //ignore whitespace
     while (stream[stream_index] == ' '
@@ -284,41 +296,54 @@ command_t commandize_stream(char* stream, size_t* stream_size)
               || buffer[index + 4] == '\t'))
             {
               else_counter--;
-              if (else_counter == 0)
-              {
-                cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
+			  if (else_counter == 0)
+			  {
+				  cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
 
-                //update buffer_index to reflect position after "else"
-                index += 4;
+				  //update buffer_index to reflect position after "else"
+				  index += 4;
 
-                //setting up command[2]
-                a = buffer[index];
-                char* buffer_C = checked_malloc(buffer_size * sizeof(char));
-                size_t buffer_C_index = 0;
-                while (index < buffer_index + 1)
-                {
-                  buffer_C[buffer_C_index++] = a;
-                  a = buffer[++index];
-                }
+				  //setting up command[2]
+				  a = buffer[index];
+				  char* buffer_C = checked_malloc(buffer_size * sizeof(char));
+				  size_t buffer_C_index = 0;
+				  while (index < buffer_index + 1)
+				  {
+					  buffer_C[buffer_C_index++] = a;
+					  a = buffer[++index];
+				  }
 
-                buffer_C_index--;
+				  buffer_C_index--;
 
-                cmd->u.command[2] = commandize_stream(buffer_C, &buffer_C_index);
-                stream_index += 2;
-
-                break;
-              }
+				  cmd->u.command[2] = commandize_stream(buffer_C, &buffer_C_index);
+				  stream_index += 2;
+				  if (command_counter == 0)
+				  {
+					  return cmd;
+				  }
+				  else
+				  {
+					  break;
+				  }
+			  }
             }
             else if (index == buffer_index)
             {
               if (else_counter != 0)
               {
                 cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
-                break;
+                if(command_counter == 0)
+                {
+                  return cmd;
+                }
+                else
+                {
+                  break;
+                }
               }
               else
               {
-                error(1, 0, "Syntax Error--Unfinished If Statement");
+                error(1, 0, "Syntax Error");
               }
             }
             buffer_B[buffer_B_index++] = a;
@@ -341,7 +366,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       //realloc if buffer_size needs to be increased
       if (buffer_index == buffer_size)
       {
-        checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+        buffer = checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
         buffer_size += 32;
       }
     }
@@ -356,6 +381,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     || stream[stream_index + 5] == '\n'
     || stream[stream_index + 5] == '\t'))
   {
+    command_counter++;
     stream_index += 6;
     //ignore whitespace
     while (stream[stream_index] == ' '
@@ -392,6 +418,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         || stream[stream_index + 5] == '\n'
         || stream[stream_index + 5] == '\t')))
       {
+        command_counter++;
         until_counter++;
       }
       else if (c == 'd'
@@ -403,6 +430,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         || stream[stream_index + 4] == '\t'))
       {
         until_counter--;
+        command_counter--;
         if (until_counter == 0)
         {
           cmd = create_command(UNTIL_COMMAND, buffer, buffer_index, NULL, NULL);
@@ -482,7 +510,14 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 
           cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
           stream_index += 4;
-          break;
+          if (command_counter == 0)
+          {
+            return cmd;
+          }
+          else
+          {
+            break;
+          }
         } 
       }
       buffer[buffer_index] = c;
@@ -492,7 +527,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       //realloc if buffer_size needs to be increased
       if (buffer_index == buffer_size)
       {
-        checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+        buffer = checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
         buffer_size += 32;
       }
     }
@@ -507,6 +542,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
   || stream[stream_index+5] == '\n'
   || stream[stream_index+5] == '\t'))
   {
+    command_counter++;
   stream_index += 6;
   //ignore whitespace
   while (stream[stream_index] == ' '
@@ -544,6 +580,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     || stream[stream_index + 5] == '\t')))
     {
     while_counter++;
+    command_counter++;
     }
     else if (c == 'd'
     && stream[stream_index + 1] == 'o'
@@ -554,6 +591,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     || stream[stream_index + 4] == '\t'))
     {
     while_counter--;
+    command_counter--;
       if (while_counter == 0)
       {
         cmd = create_command(WHILE_COMMAND, buffer, buffer_index, NULL, NULL);
@@ -616,8 +654,6 @@ command_t commandize_stream(char* stream, size_t* stream_size)
           index++;
         }
 
-        // break;
-
         //setting up command[1]
         char* buffer_B = checked_malloc(buffer_size * sizeof(char));
         size_t buffer_B_index = 0;
@@ -627,12 +663,18 @@ command_t commandize_stream(char* stream, size_t* stream_size)
           buffer_B[buffer_B_index++] = a;
           a = buffer[++index];
         }
-
         buffer_B_index--;
 
         cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
         stream_index += 4;
-        break;
+        if(command_counter == 0)
+        {
+          return cmd;
+        }
+        else
+        {
+          break;
+        }
       }
     }
     buffer[buffer_index] = c;
@@ -642,7 +684,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     //realloc if buffer_size needs to be increased
     if (buffer_index == buffer_size)
     {
-    checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+    buffer = checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
     buffer_size += 32;
     }
   }
@@ -664,7 +706,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         //realloc if buffer_size needs to be increased
         if (buffer_index == buffer_size)
         {
-          checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
+          buffer = checked_realloc(buffer, (buffer_size + 32)*sizeof(char));
           buffer_size += 32;
         }
 
@@ -746,13 +788,16 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
       }
 
-    return cmd;
+      if (command_counter == 0)
+      {
+        return cmd;
+      }
   }
   //ignore whitespace}
 
   else if (c == ' ' || c == '\t' || c == '\n')
   {
-    //skip whitespace
+    //delete whitespace
   }
   //don't recognize char
   else
@@ -772,20 +817,20 @@ make_command_stream (int (*get_next_byte) (void *),
   char* file_stream = stream(get_next_byte,get_next_byte_argument, size);
 
   command_stream_t cmd_stream = checked_malloc(sizeof(struct command_stream));
-  //  command_stream_t cmd_current = checked_malloc(sizeof(struct command_stream)); 
-  //
-  //  cmd_current = cmd_stream;
-  //
-  //  while( *size != 0)
-  //  {
-  //    command_t cmd_temp = commandize_stream(file_stream, size);
-  //    cmd_current->cmd = &cmd_temp;
-  //    cmd_current->next = checked_malloc(sizeof(struct command_stream));
-  //    cmd_current = cmd_current->next;
-  //  }
-  command_t cmd_temp = commandize_stream(file_stream, size);
-  cmd_stream->cmd = &cmd_temp;
-  cmd_stream->next = NULL;
+  command_stream_t cmd_current = checked_malloc(sizeof(struct command_stream)); 
+  
+  cmd_current = cmd_stream;
+  
+  while( *size != 0)
+  {
+    command_t cmd_temp = commandize_stream(file_stream, size);
+    cmd_current->cmd = &cmd_temp;
+    cmd_current->next = checked_malloc(sizeof(struct command_stream));
+    cmd_current = cmd_current->next;
+  }
+  //command_t cmd_temp = commandize_stream(file_stream, size);
+  //cmd_stream->cmd = &cmd_temp;
+  //cmd_stream->next = NULL;
 
   return cmd_stream;
 }
