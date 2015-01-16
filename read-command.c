@@ -31,8 +31,10 @@
 struct command_stream {
   command_t* cmd;
   int cmd_total;
-  struct command_stream* next;
+  int capacity;
+  int idx;
 };
+
 
 //create a buffer for entire file, stream in all chars.
 char* stream(int (*get_next_byte) (void *), void *get_next_byte_argument, size_t* size)
@@ -88,7 +90,8 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
     {
       cmd->input = NULL;
     }
-    cmd->u.word = checked_malloc(sizeof(char*));
+    cmd->u.word = checked_malloc(2*sizeof(char*));
+    cmd->u.word[1] = NULL;
     cmd->u.word[0] = checked_malloc(size * sizeof(char));
     strncpy(cmd->u.word[0], storage_input, size);
   }
@@ -167,24 +170,24 @@ command_t commandize_stream(char** stream, size_t* stream_size)
         cmd->u.command[0] = commandize_stream(&cmd->storage, &cmd->storage_size);
         if (command_counter == 0)
         {
-		  if (stream_index <= *stream_size)
-		  {
-			stream_index++;
-			while ((*stream)[stream_index] == ' '
-				|| (*stream)[stream_index] == '\t'
-				|| (*stream)[stream_index] == '\n')
-			{
-				stream_index++;
-			}
-			*stream += stream_index;
-		    *stream_size -= stream_index;
-		  }
-		  else
-		  {
-			  *stream = "";
-			  stream_size -= stream_index;
-		  }
-		  
+      if (stream_index <= *stream_size)
+      {
+      stream_index++;
+      while ((*stream)[stream_index] == ' '
+        || (*stream)[stream_index] == '\t'
+        || (*stream)[stream_index] == '\n')
+      {
+        stream_index++;
+      }
+      *stream += stream_index;
+        *stream_size -= stream_index;
+      }
+      else
+      {
+        *stream = "";
+        stream_size -= stream_index;
+      }
+      
           return cmd;
         }
         else
@@ -237,114 +240,127 @@ command_t commandize_stream(char** stream, size_t* stream_size)
       {
         if_counter++;
       }
-      else if (c == 'f' && (*stream)[stream_index + 1] == 'i'
-        && ((*stream)[stream_index + 2] == ' '
-        || (*stream)[stream_index + 2] == '\n'
-        || (*stream)[stream_index + 2] == '\t'))
-      {
-        if_counter--;
-        if (if_counter == 0)
-        {
-          cmd = create_command(IF_COMMAND, buffer, buffer_index, NULL, NULL);
+	  else if (c == 'f' && (*stream)[stream_index + 1] == 'i'
+		  && ((*stream)[stream_index + 2] == ' '
+		  || (*stream)[stream_index + 2] == '\n'
+		  || (*stream)[stream_index + 2] == '\t'))
+	  {
+		  if_counter--;
+		  if (if_counter == 0)
+		  {
+			  cmd = create_command(IF_COMMAND, buffer, buffer_index, NULL, NULL);
 
-          //setting up command[0]
-          char* buffer_A = checked_malloc(buffer_size * sizeof(char));
-          size_t buffer_A_index = 0;
-          size_t index = 0;
-          int then_counter = 1;
-          char a;
-          while (then_counter > 0)
-          {
-            a = buffer[index];
-
-            if (a == 'i' && buffer[index + 1] == 'f'
-              && (buffer[index + 2] == ' '
-              || buffer[index + 2] == '\n'
-              || buffer[index + 2] == '\t'))
-            {
-              then_counter++;
-            }
-            else if (a == 't'
-              && buffer[index + 1] == 'h'
-              && buffer[index + 2] == 'e'
-              && buffer[index + 3] == 'n'
-              && (buffer[index + 4] == ' '
-              || buffer[index + 4] == '\n'
-              || buffer[index + 4] == '\t'))
-            {
-              then_counter--;
-              cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
-              break;
-            }
-            buffer_A[buffer_A_index++] = a;
-            index++;
-          }
-
-          //update buffer_index to reflect position after "then"
-          index += 4;
-
-          //get rid of whitespace
-          while (buffer[index] == ' '
-            || buffer[index] == '\n'
-            || buffer[index] == '\t')
-          {
-            index++;
-          }
-
-          //setting up command[1]
-          char* buffer_B = checked_malloc(buffer_size * sizeof(char));
-          size_t buffer_B_index = 0;
-          int else_counter = 1;
-          while (else_counter > 0)
-          {
-            a = buffer[index];
-            if (a == 'i' && buffer[index + 1] == 'f'
-              && (buffer[index + 2] == ' '
-              || buffer[index + 2] == '\n'
-              || buffer[index + 2] == '\t'))
-            {
-              else_counter++;
-            }
-            else if (a == 'e'
-              && buffer[index + 1] == 'l'
-              && buffer[index + 2] == 's'
-              && buffer[index + 3] == 'e'
-              && (buffer[index + 4] == ' '
-              || buffer[index + 4] == '\n'
-              || buffer[index + 4] == '\t'))
-            {
-              else_counter--;
-			  if (else_counter == 0)
+			  //setting up command[0]
+			  char* buffer_A = checked_malloc(buffer_size * sizeof(char));
+			  size_t buffer_A_index = 0;
+			  size_t index = 0;
+			  int then_counter = 1;
+			  char a;
+			  while (then_counter > 0)
 			  {
-				  cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
-
-				  //update buffer_index to reflect position after "else"
-				  index += 4;
-
-				  //setting up command[2]
 				  a = buffer[index];
-				  char* buffer_C = checked_malloc(buffer_size * sizeof(char));
-				  size_t buffer_C_index = 0;
-				  while (index < buffer_index + 1)
-				  {
-					  buffer_C[buffer_C_index++] = a;
-					  a = buffer[++index];
-				  }
 
-				  buffer_C_index--;
-
-				  cmd->u.command[2] = commandize_stream(&buffer_C, &buffer_C_index);
-				  stream_index += 2;
-				  if (command_counter == 0)
+				  if (a == 'i' && buffer[index + 1] == 'f'
+					  && (buffer[index + 2] == ' '
+					  || buffer[index + 2] == '\n'
+					  || buffer[index + 2] == '\t'))
 				  {
-					  return cmd;
+					  then_counter++;
 				  }
-				  else
+				  else if (a == 't'
+					  && buffer[index + 1] == 'h'
+					  && buffer[index + 2] == 'e'
+					  && buffer[index + 3] == 'n'
+					  && (buffer[index + 4] == ' '
+					  || buffer[index + 4] == '\n'
+					  || buffer[index + 4] == '\t'))
 				  {
+					  then_counter--;
+					  cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
 					  break;
 				  }
+				  buffer_A[buffer_A_index++] = a;
+				  index++;
 			  }
-            }
+
+			  //update buffer_index to reflect position after "then"
+			  index += 4;
+
+			  //get rid of whitespace
+			  while (buffer[index] == ' '
+				  || buffer[index] == '\n'
+				  || buffer[index] == '\t')
+			  {
+				  index++;
+			  }
+
+			  //setting up command[1]
+			  char* buffer_B = checked_malloc(buffer_size * sizeof(char));
+			  size_t buffer_B_index = 0;
+			  int else_counter = 1;
+			  while (else_counter > 0)
+			  {
+				  a = buffer[index];
+				  if (a == 'i' && buffer[index + 1] == 'f'
+					  && (buffer[index + 2] == ' '
+					  || buffer[index + 2] == '\n'
+					  || buffer[index + 2] == '\t'))
+				  {
+					  else_counter++;
+				  }
+				  else if (a == 'e'
+					  && buffer[index + 1] == 'l'
+					  && buffer[index + 2] == 's'
+					  && buffer[index + 3] == 'e'
+					  && (buffer[index + 4] == ' '
+					  || buffer[index + 4] == '\n'
+					  || buffer[index + 4] == '\t'))
+				  {
+					  else_counter--;
+					  if (else_counter == 0)
+					  {
+						  cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
+
+						  //update buffer_index to reflect position after "else"
+						  index += 4;
+
+						  //setting up command[2]
+						  a = buffer[index];
+						  char* buffer_C = checked_malloc(buffer_size * sizeof(char));
+						  size_t buffer_C_index = 0;
+						  while (index < buffer_index + 1)
+						  {
+							  buffer_C[buffer_C_index++] = a;
+							  a = buffer[++index];
+						  }
+
+						  buffer_C_index--;
+
+						  cmd->u.command[2] = commandize_stream(&buffer_C, &buffer_C_index);
+						  stream_index += 2;
+						  if (command_counter == 0)
+						  {
+							  while ((*stream)[stream_index] == ' '
+								  || (*stream)[stream_index] == '\t'
+								  || (*stream)[stream_index] == '\n')
+							  {
+								  stream_index++;
+							  }
+							  *stream += stream_index;
+							  *stream_size -= stream_index;
+						  }
+						  else
+						  {
+							  *stream = "";
+							  stream_size -= stream_index;
+						  }
+						  return cmd;
+					  }
+					  else
+					  {
+						  break;
+					  }
+				  }
             else if (index == buffer_index)
             {
               if (else_counter != 0)
@@ -815,15 +831,15 @@ command_t commandize_stream(char** stream, size_t* stream_size)
 
   else if (c == ' ' || c == '\t' || c == '\n')
   {
-	  stream_index++;
+    stream_index++;
   }
   //don't recognize char
   else
   {
-	  error(2, 0, "Syntax Error");
+    error(2, 0, "Syntax Error");
   }
   }
-  return cmd;
+  return NULL;
 }
 
 command_stream_t
@@ -834,38 +850,30 @@ make_command_stream (int (*get_next_byte) (void *),
   size_t* size = &init;
   char* file_stream = stream(get_next_byte,get_next_byte_argument, size);
 
-  command_stream_t cmd_stream = checked_malloc(sizeof(struct command_stream));
-  command_stream_t cmd_current = checked_malloc(sizeof(struct command_stream)); 
-  
-  cmd_current = cmd_stream;
-  
-  while( *size != 0)
+  command_stream_t stream = checked_malloc(sizeof(struct command_stream));
+  stream->capacity = 128;
+  stream->cmd_total = stream->idx = 0;
+  stream->cmd = checked_malloc(128 * sizeof(command_t));
+  while(*size != 0)
   {
-    command_t cmd_temp = commandize_stream(&file_stream, size);
-    cmd_current->cmd = &cmd_temp;
-    cmd_current->next = checked_malloc(sizeof(struct command_stream));
-    cmd_current = cmd_current->next;
+    if (stream->cmd_total == stream->capacity - 1)
+    {
+      stream->cmd = checked_realloc(stream->cmd, stream->capacity*sizeof(command_t)*2);
+      stream->capacity *= 2;
+    }
+    stream->cmd[stream->cmd_total++] = commandize_stream(&file_stream, size);
   }
   //command_t cmd_temp = commandize_stream(file_stream, size);
   //cmd_stream->cmd = &cmd_temp;
   //cmd_stream->next = NULL;
 
-  return cmd_stream;
+  return stream;
 }
 
 command_t
-read_command_stream (command_stream_t* cmd_stream)
+read_command_stream (command_stream_t stream)
 {
-  /* FIXME: Replace this with your implementation too.  */
-  command_t cmd = checked_malloc(sizeof(struct command));
-  if (*cmd_stream)
-  {  
-  cmd = *((*cmd_stream)->cmd);
-  *cmd_stream = (*cmd_stream)->next;
-  }
-  else
-  {
-  return NULL;
-  }
-  return cmd;
+  if (stream->idx < stream->cmd_total)
+    return stream->cmd[stream->idx++];
+  else return NULL;
 }
