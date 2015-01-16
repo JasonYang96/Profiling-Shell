@@ -752,17 +752,19 @@ command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
        void *get_next_byte_argument)
 {
-  /* FIXME */
   size_t init = 0;
   size_t* size = &init;
   char* file_stream = stream(get_next_byte,get_next_byte_argument, size);
 
-  // Split file_stream along double newlines
+  command_stream_t cmd_stream = checked_malloc(sizeof(command_stream));
 
-  command_t cmd_temp = commandize_stream(file_stream, size);
-  command_stream_t cmd_stream = checked_malloc(sizeof(command_stream_t));
-  cmd_stream->cmd = &cmd_temp;
-  cmd_stream->next = NULL;
+  while( *size != 0)
+  {
+    command_t cmd_temp = commandize_stream(file_stream, size);
+    cmd_stream->cmd = &cmd_temp;
+    cmd_stream->next = checked_malloc(sizeof(command_stream));
+    cmd_stream = cmd_stream->next;
+  }
 
   return cmd_stream;
 }
