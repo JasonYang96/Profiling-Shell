@@ -756,14 +756,16 @@ make_command_stream (int (*get_next_byte) (void *),
   size_t* size = &init;
   char* file_stream = stream(get_next_byte,get_next_byte_argument, size);
 
-  command_stream_t cmd_stream = checked_malloc(sizeof(command_stream));
+  command_stream_t cmd_stream = checked_malloc(sizeof(struct command_stream));
+  command_stream_t cmd_current = checked_malloc(sizeof(struct command_stream));
+  cmd_current = cmd_stream;
 
   while( *size != 0)
   {
     command_t cmd_temp = commandize_stream(file_stream, size);
-    cmd_stream->cmd = &cmd_temp;
-    cmd_stream->next = checked_malloc(sizeof(command_stream));
-    cmd_stream = cmd_stream->next;
+    cmd_current->cmd = &cmd_temp;
+    cmd_current->next = checked_malloc(sizeof(command_stream));
+    cmd_current = cmd_current->next;
   }
 
   return cmd_stream;
