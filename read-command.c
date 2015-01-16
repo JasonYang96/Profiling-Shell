@@ -121,7 +121,7 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
   return cmd;
 }
 
-command_t commandize_stream(char* stream, size_t* stream_size)
+command_t commandize_stream(char** stream, size_t* stream_size)
 {
   command_t cmd;
   int command_counter = 0;
@@ -129,20 +129,20 @@ command_t commandize_stream(char* stream, size_t* stream_size)
   size_t stream_index;
   for(stream_index = 0; stream_index < *stream_size; stream_index++)
   {
-  char c = stream[stream_index];
+  char c = (*stream)[stream_index];
 
   //tokenize subshell command
   if (c == '(')
   {
     command_counter++;
     //ignore whitespace
-    while (stream[stream_index+1] == ' ' 
-    || stream[stream_index+1] == '\n' 
-    || stream[stream_index+1] == '\t')
+    while ((*stream)[stream_index+1] == ' ' 
+    || (*stream)[stream_index+1] == '\n' 
+    || (*stream)[stream_index+1] == '\t')
     {
     stream_index++;
     }
-    c = stream[++stream_index];
+    c = (*stream)[++stream_index];
 
     char* buffer = (char*) checked_malloc(32*sizeof(char));
     size_t buffer_size = 32;
@@ -164,9 +164,27 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       if (open_counter == 0)
       {
         cmd = create_command(SUBSHELL_COMMAND, buffer, buffer_index, NULL, NULL);
-        cmd->u.command[0] = commandize_stream(cmd->storage, &cmd->storage_size);
+        cmd->u.command[0] = commandize_stream(&cmd->storage, &cmd->storage_size);
         if (command_counter == 0)
         {
+		  if (stream_index <= *stream_size)
+		  {
+			stream_index++;
+			while ((*stream)[stream_index] == ' '
+				|| (*stream)[stream_index] == '\t'
+				|| (*stream)[stream_index] == '\n')
+			{
+				stream_index++;
+			}
+			*stream += stream_index;
+		    *stream_size -= stream_index;
+		  }
+		  else
+		  {
+			  *stream = "";
+			  stream_size -= stream_index;
+		  }
+		  
           return cmd;
         }
         else
@@ -178,7 +196,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     buffer[buffer_index] = c;
     buffer_index++;
 
-    c = stream[++stream_index];
+    c = (*stream)[++stream_index];
     //realloc if buffer_size needs to be increased
     if (buffer_index == buffer_size)
     {
@@ -188,21 +206,21 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     }
   }
   //tokenize if command
-  else if (c == 'i' && stream[stream_index + 1] == 'f'
-    && (stream[stream_index + 2] == ' '
-    || stream[stream_index + 2] == '\n'
-    || stream[stream_index + 2] == '\t'))
+  else if (c == 'i' && (*stream)[stream_index + 1] == 'f'
+    && ((*stream)[stream_index + 2] == ' '
+    || (*stream)[stream_index + 2] == '\n'
+    || (*stream)[stream_index + 2] == '\t'))
   {
     command_counter++;
     stream_index += 3;
     //ignore whitespace
-    while (stream[stream_index] == ' '
-      || stream[stream_index] == '\n'
-      || stream[stream_index] == '\t')
+    while ((*stream)[stream_index] == ' '
+      || (*stream)[stream_index] == '\n'
+      || (*stream)[stream_index] == '\t')
     {
       stream_index++;
     }
-    c = stream[stream_index];
+    c = (*stream)[stream_index];
     char* buffer = (char*)checked_malloc(32 * sizeof(char));
     size_t buffer_size = 32;
     size_t buffer_index = 0;
@@ -211,18 +229,18 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     while (if_counter > 0)
     {
       //put everything until "fi" into storage of if token
-      c = stream[stream_index];
-      if (c == 'i' && stream[stream_index + 1] == 'f'
-        && (stream[stream_index + 2] == ' '
-        || stream[stream_index + 2] == '\n'
-        || stream[stream_index + 2] == '\t'))
+      c = (*stream)[stream_index];
+      if (c == 'i' && (*stream)[stream_index + 1] == 'f'
+        && ((*stream)[stream_index + 2] == ' '
+        || (*stream)[stream_index + 2] == '\n'
+        || (*stream)[stream_index + 2] == '\t'))
       {
         if_counter++;
       }
-      else if (c == 'f' && stream[stream_index + 1] == 'i'
-        && (stream[stream_index + 2] == ' '
-        || stream[stream_index + 2] == '\n'
-        || stream[stream_index + 2] == '\t'))
+      else if (c == 'f' && (*stream)[stream_index + 1] == 'i'
+        && ((*stream)[stream_index + 2] == ' '
+        || (*stream)[stream_index + 2] == '\n'
+        || (*stream)[stream_index + 2] == '\t'))
       {
         if_counter--;
         if (if_counter == 0)
@@ -255,7 +273,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
               || buffer[index + 4] == '\t'))
             {
               then_counter--;
-              cmd->u.command[0] = commandize_stream(buffer_A, &buffer_A_index);
+              cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
               break;
             }
             buffer_A[buffer_A_index++] = a;
@@ -298,7 +316,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
               else_counter--;
 			  if (else_counter == 0)
 			  {
-				  cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
+				  cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
 
 				  //update buffer_index to reflect position after "else"
 				  index += 4;
@@ -315,7 +333,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 
 				  buffer_C_index--;
 
-				  cmd->u.command[2] = commandize_stream(buffer_C, &buffer_C_index);
+				  cmd->u.command[2] = commandize_stream(&buffer_C, &buffer_C_index);
 				  stream_index += 2;
 				  if (command_counter == 0)
 				  {
@@ -331,7 +349,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
             {
               if (else_counter != 0)
               {
-                cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
+                cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
                 if(command_counter == 0)
                 {
                   return cmd;
@@ -362,7 +380,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       buffer[buffer_index] = c;
       buffer_index++;
 
-      c = stream[++stream_index];
+      c = (*stream)[++stream_index];
       //realloc if buffer_size needs to be increased
       if (buffer_index == buffer_size)
       {
@@ -373,24 +391,24 @@ command_t commandize_stream(char* stream, size_t* stream_size)
   }
   //tokenize until command
   else if (c == 'u'
-    && stream[stream_index + 1] == 'n'
-    && stream[stream_index + 2] == 't'
-    && stream[stream_index + 3] == 'i'
-    && stream[stream_index + 4] == 'l'
-    && (stream[stream_index + 5] == ' '
-    || stream[stream_index + 5] == '\n'
-    || stream[stream_index + 5] == '\t'))
+    && (*stream)[stream_index + 1] == 'n'
+    && (*stream)[stream_index + 2] == 't'
+    && (*stream)[stream_index + 3] == 'i'
+    && (*stream)[stream_index + 4] == 'l'
+    && ((*stream)[stream_index + 5] == ' '
+    || (*stream)[stream_index + 5] == '\n'
+    || (*stream)[stream_index + 5] == '\t'))
   {
     command_counter++;
     stream_index += 6;
     //ignore whitespace
-    while (stream[stream_index] == ' '
-      || stream[stream_index] == '\n'
-      || stream[stream_index] == '\t')
+    while ((*stream)[stream_index] == ' '
+      || (*stream)[stream_index] == '\n'
+      || (*stream)[stream_index] == '\t')
     {
       stream_index++;
     }
-    c = stream[stream_index];
+    c = (*stream)[stream_index];
 
     char* buffer = (char*)checked_malloc(32 * sizeof(char));
     size_t buffer_size = 32;
@@ -400,34 +418,34 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     while (until_counter > 0)
     {
       //put everything until "done" into storage of until token
-      c = stream[stream_index];
+      c = (*stream)[stream_index];
       if ((c == 'u'
-        && stream[stream_index + 1] == 'n'
-        && stream[stream_index + 2] == 't'
-        && stream[stream_index + 3] == 'i'
-        && stream[stream_index + 4] == 'l'
-        && (stream[stream_index + 5] == ' '
-        || stream[stream_index + 5] == '\n'
-        || stream[stream_index + 5] == '\t')) 
+        && (*stream)[stream_index + 1] == 'n'
+        && (*stream)[stream_index + 2] == 't'
+        && (*stream)[stream_index + 3] == 'i'
+        && (*stream)[stream_index + 4] == 'l'
+        && ((*stream)[stream_index + 5] == ' '
+        || (*stream)[stream_index + 5] == '\n'
+        || (*stream)[stream_index + 5] == '\t')) 
         || (c == 'w'
-        && stream[stream_index + 1] == 'h'
-        && stream[stream_index + 2] == 'i'
-        && stream[stream_index + 3] == 'l'
-        && stream[stream_index + 4] == 'e'
-        && (stream[stream_index + 5] == ' '
-        || stream[stream_index + 5] == '\n'
-        || stream[stream_index + 5] == '\t')))
+        && (*stream)[stream_index + 1] == 'h'
+        && (*stream)[stream_index + 2] == 'i'
+        && (*stream)[stream_index + 3] == 'l'
+        && (*stream)[stream_index + 4] == 'e'
+        && ((*stream)[stream_index + 5] == ' '
+        || (*stream)[stream_index + 5] == '\n'
+        || (*stream)[stream_index + 5] == '\t')))
       {
         command_counter++;
         until_counter++;
       }
       else if (c == 'd'
-        && stream[stream_index + 1] == 'o'
-        && stream[stream_index + 2] == 'n'
-        && stream[stream_index + 3] == 'e'
-        && (stream[stream_index + 4] == ' '
-        || stream[stream_index + 4] == '\n'
-        || stream[stream_index + 4] == '\t'))
+        && (*stream)[stream_index + 1] == 'o'
+        && (*stream)[stream_index + 2] == 'n'
+        && (*stream)[stream_index + 3] == 'e'
+        && ((*stream)[stream_index + 4] == ' '
+        || (*stream)[stream_index + 4] == '\n'
+        || (*stream)[stream_index + 4] == '\t'))
       {
         until_counter--;
         command_counter--;
@@ -475,7 +493,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
               do_counter--;
               if (do_counter == 0) 
               {
-                cmd->u.command[0] = commandize_stream(buffer_A, &buffer_A_index);
+                cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
                 break;
               }
             }
@@ -508,7 +526,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 
           buffer_B_index--;
 
-          cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
+          cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
           stream_index += 4;
           if (command_counter == 0)
           {
@@ -523,7 +541,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       buffer[buffer_index] = c;
       buffer_index++;
 
-      c = stream[++stream_index];
+      c = (*stream)[++stream_index];
       //realloc if buffer_size needs to be increased
       if (buffer_index == buffer_size)
       {
@@ -534,24 +552,24 @@ command_t commandize_stream(char* stream, size_t* stream_size)
   }
   //tokenize while command
   else if (c == 'w'
-    && stream[stream_index+1] == 'h'
-    && stream[stream_index+2] == 'i'
-    && stream[stream_index+3] == 'l'
-    && stream[stream_index+4] == 'e'
-    && (stream[stream_index+5] == ' ' 
-  || stream[stream_index+5] == '\n'
-  || stream[stream_index+5] == '\t'))
+    && (*stream)[stream_index+1] == 'h'
+    && (*stream)[stream_index+2] == 'i'
+    && (*stream)[stream_index+3] == 'l'
+    && (*stream)[stream_index+4] == 'e'
+    && ((*stream)[stream_index+5] == ' ' 
+  || (*stream)[stream_index+5] == '\n'
+  || (*stream)[stream_index+5] == '\t'))
   {
     command_counter++;
   stream_index += 6;
   //ignore whitespace
-  while (stream[stream_index] == ' '
-    || stream[stream_index] == '\n'
-    || stream[stream_index] == '\t')
+  while ((*stream)[stream_index] == ' '
+    || (*stream)[stream_index] == '\n'
+    || (*stream)[stream_index] == '\t')
   {
     stream_index++;
   }
-  c = stream[stream_index];
+  c = (*stream)[stream_index];
 
   char* buffer = (char*)checked_malloc(32 * sizeof(char));
   size_t buffer_size = 32;
@@ -561,34 +579,34 @@ command_t commandize_stream(char* stream, size_t* stream_size)
   while (while_counter > 0)
   {
     //put everything until "done" into storage of while token
-    c = stream[stream_index];
+    c = (*stream)[stream_index];
     if ((c == 'w'
-    && stream[stream_index + 1] == 'h'
-    && stream[stream_index + 2] == 'i'
-    && stream[stream_index + 3] == 'l'
-    && stream[stream_index + 4] == 'e'
-    && (stream[stream_index + 5] == ' '
-    || stream[stream_index + 5] == '\n'
-    || stream[stream_index + 5] == '\t')) || 
+    && (*stream)[stream_index + 1] == 'h'
+    && (*stream)[stream_index + 2] == 'i'
+    && (*stream)[stream_index + 3] == 'l'
+    && (*stream)[stream_index + 4] == 'e'
+    && ((*stream)[stream_index + 5] == ' '
+    || (*stream)[stream_index + 5] == '\n'
+    || (*stream)[stream_index + 5] == '\t')) || 
     (c == 'u'
-    && stream[stream_index + 1] == 'n'
-    && stream[stream_index + 2] == 't'
-    && stream[stream_index + 3] == 'i'
-    && stream[stream_index + 4] == 'l'
-    && (stream[stream_index + 5] == ' '
-    || stream[stream_index + 5] == '\n'
-    || stream[stream_index + 5] == '\t')))
+    && (*stream)[stream_index + 1] == 'n'
+    && (*stream)[stream_index + 2] == 't'
+    && (*stream)[stream_index + 3] == 'i'
+    && (*stream)[stream_index + 4] == 'l'
+    && ((*stream)[stream_index + 5] == ' '
+    || (*stream)[stream_index + 5] == '\n'
+    || (*stream)[stream_index + 5] == '\t')))
     {
     while_counter++;
     command_counter++;
     }
     else if (c == 'd'
-    && stream[stream_index + 1] == 'o'
-    && stream[stream_index + 2] == 'n'
-    && stream[stream_index + 3] == 'e'
-    && (stream[stream_index + 4] == ' '
-    || stream[stream_index + 4] == '\n'
-    || stream[stream_index + 4] == '\t'))
+    && (*stream)[stream_index + 1] == 'o'
+    && (*stream)[stream_index + 2] == 'n'
+    && (*stream)[stream_index + 3] == 'e'
+    && ((*stream)[stream_index + 4] == ' '
+    || (*stream)[stream_index + 4] == '\n'
+    || (*stream)[stream_index + 4] == '\t'))
     {
     while_counter--;
     command_counter--;
@@ -635,7 +653,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
             do_counter--;
             if (do_counter == 0) 
             {
-              cmd->u.command[0] = commandize_stream(buffer_A, &buffer_A_index);
+              cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
               break;
             }
           }
@@ -665,7 +683,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         }
         buffer_B_index--;
 
-        cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
+        cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
         stream_index += 4;
         if(command_counter == 0)
         {
@@ -680,7 +698,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
     buffer[buffer_index] = c;
     buffer_index++;
 
-    c = stream[++stream_index];
+    c = (*stream)[++stream_index];
     //realloc if buffer_size needs to be increased
     if (buffer_index == buffer_size)
     {
@@ -714,9 +732,9 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         buffer_index++;
 
         //tokenize sequence or pipe command
-        if (stream[stream_index + 1] == ';' || stream[stream_index + 1] == '|')
+        if ((*stream)[stream_index + 1] == ';' || (*stream)[stream_index + 1] == '|')
         {
-          if (stream[stream_index + 1] == ';')
+          if ((*stream)[stream_index + 1] == ';')
           {
             buffer_command_type = SEQUENCE_COMMAND;
           }
@@ -737,23 +755,23 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 
           stream_index += 2;
 
-          c = stream[stream_index];
+          c = (*stream)[stream_index];
           buffer_index++;
 
-          while (stream[stream_index] == ' '
-            || stream[stream_index] == '\n'
-            || stream[stream_index] == '\t')
+          while ((*stream)[stream_index] == ' '
+            || (*stream)[stream_index] == '\n'
+            || (*stream)[stream_index] == '\t')
           {
             stream_index++;
           }
 
-          c = stream[stream_index];
+          c = (*stream)[stream_index];
 
           while (stream_index < *stream_size)
           {
             buffer_B[buffer_B_index] = c;
             buffer_B_index++;
-           c = stream[++stream_index];
+           c = (*stream)[++stream_index];
           }
         }
 
@@ -762,7 +780,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
         //increment c
         if (stream_index < *stream_size)
         {
-          c = stream[++stream_index];
+          c = (*stream)[++stream_index];
         }
         else
         {
@@ -778,14 +796,14 @@ command_t commandize_stream(char* stream, size_t* stream_size)
       else if (buffer_command_type == SEQUENCE_COMMAND)
       {
         cmd = create_command(SEQUENCE_COMMAND, buffer, buffer_index, NULL, NULL);
-        cmd->u.command[0] = commandize_stream(buffer_A, &buffer_A_index);
-        cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
+        cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
+        cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
       }
       else
       {
         cmd = create_command(PIPE_COMMAND, buffer, buffer_index, NULL, NULL);
-        cmd->u.command[0] = commandize_stream(buffer_A, &buffer_A_index);
-        cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
+        cmd->u.command[0] = commandize_stream(&buffer_A, &buffer_A_index);
+        cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
       }
 
       if (command_counter == 0)
@@ -797,12 +815,12 @@ command_t commandize_stream(char* stream, size_t* stream_size)
 
   else if (c == ' ' || c == '\t' || c == '\n')
   {
-    //delete whitespace
+	  stream_index++;
   }
   //don't recognize char
   else
   {
-    //output error message
+	  error(2, 0, "Syntax Error");
   }
   }
   return cmd;
@@ -823,7 +841,7 @@ make_command_stream (int (*get_next_byte) (void *),
   
   while( *size != 0)
   {
-    command_t cmd_temp = commandize_stream(file_stream, size);
+    command_t cmd_temp = commandize_stream(&file_stream, size);
     cmd_current->cmd = &cmd_temp;
     cmd_current->next = checked_malloc(sizeof(struct command_stream));
     cmd_current = cmd_current->next;
@@ -845,7 +863,7 @@ read_command_stream (command_stream_t* cmd_stream)
   cmd = *((*cmd_stream)->cmd);
   *cmd_stream = (*cmd_stream)->next;
   }
-  else 
+  else
   {
   return NULL;
   }
