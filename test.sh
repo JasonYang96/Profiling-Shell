@@ -8,6 +8,7 @@ do
 			if Elsa
 			then Francine
 			else 
+				Greg | Har | Ira | Jake | Ken | Leniver | Mary
 				ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEF
 			fi
 		fi
