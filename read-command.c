@@ -311,7 +311,7 @@ command_t commandize_stream(char* stream, size_t* stream_size)
             }
             else if (index == buffer_index)
             {
-              if (else_counter == 1)
+              if (else_counter != 0)
               {
                 cmd->u.command[1] = commandize_stream(buffer_B, &buffer_B_index);
                 break;
