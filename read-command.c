@@ -66,57 +66,57 @@ command_t create_command(enum command_type type, char* storage_input, size_t siz
   command_t cmd = checked_malloc(sizeof(struct command));
   if (type == SIMPLE_COMMAND)
   {
-    cmd->type = type;
-    cmd->storage = checked_malloc(sizeof(char));
-    cmd->storage = "";
-    cmd->storage_size = 0;
-    if (output != NULL)
-    {
-      cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-      strcpy(cmd->output, output);
-    }
-    else 
-    {
-      cmd->output = NULL;
-    }
-    if (input != NULL)
-    {
-      cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-      strcpy(cmd->input, input);
-    }
-    else 
-    {
-      cmd->input = NULL;
-    }
-    cmd->u.word = checked_malloc(sizeof(char*));
-    cmd->u.word[0] = checked_malloc(size * sizeof(char));
-    strncpy(cmd->u.word[0], storage_input, size);
+  cmd->type = type;
+  cmd->storage = checked_malloc(sizeof(char));
+  cmd->storage = "";
+  cmd->storage_size = 0;
+  if (output != NULL)
+  {
+    cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
+    strcpy(cmd->output, output);
+  }
+  else 
+  {
+    cmd->output = NULL;
+  }
+  if (input != NULL)
+  {
+    cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
+    strcpy(cmd->input, input);
+  }
+  else 
+  {
+    cmd->input = NULL;
+  }
+  cmd->u.word = checked_malloc(sizeof(char*));
+  cmd->u.word[0] = checked_malloc(size * sizeof(char));
+  strncpy(cmd->u.word[0], storage_input, size);
   }
   else
   {
-    cmd->type = type;
-    cmd->storage = checked_malloc((size + 1) * sizeof(char));
-    // strncpy(cmd->storage, storage_input, size);
-    cmd->storage = storage_input;
-    cmd->storage_size = size;
-    if (output != NULL)
-    {
-      cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
-      strcpy(cmd->output, output);
-    }
-    else 
-    {
-      cmd->output = NULL;
-    }
-    if (input != NULL)
-    {
-      cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
-      strcpy(cmd->input, input);
-    }
-    else 
-    {
-      cmd->input = NULL;
-    }
+  cmd->type = type;
+  cmd->storage = checked_malloc((size + 1) * sizeof(char));
+  // strncpy(cmd->storage, storage_input, size);
+  cmd->storage = storage_input;
+  cmd->storage_size = size;
+  if (output != NULL)
+  {
+    cmd->output = checked_malloc((strlen(output) + 1) * sizeof(char));
+    strcpy(cmd->output, output);
+  }
+  else 
+  {
+    cmd->output = NULL;
+  }
+  if (input != NULL)
+  {
+    cmd->input = checked_malloc((strlen(input) + 1) * sizeof(char));
+    strcpy(cmd->input, input);
+  }
+  else 
+  {
+    cmd->input = NULL;
+  }
   }
   return cmd;
 }
