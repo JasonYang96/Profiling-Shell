@@ -845,10 +845,24 @@ command_t commandize_stream(char** stream, size_t* stream_size)
         cmd->u.command[1] = commandize_stream(&buffer_B, &buffer_B_index);
       }
 
-      if (command_counter == 0)
-      {
-        return cmd;
-      }
+	  if (command_counter == 0)
+	  {
+		  stream_index++;
+		  while ((*stream)[stream_index] == ' '
+			  || (*stream)[stream_index] == '\t'
+			  || (*stream)[stream_index] == '\n')
+		  {
+			  stream_index++;
+		  }
+		  *stream += stream_index;
+		  *stream_size -= stream_index;
+	  }
+	  else
+	  {
+		  *stream = "";
+		  stream_size -= stream_index;
+	  }
+	  return cmd;
   }
   //ignore whitespace}
 
