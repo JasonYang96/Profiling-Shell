@@ -797,6 +797,13 @@ command_t commandize_stream(char** stream, size_t* stream_size)
 		//parse redirections
 		if ((*stream)[stream_index + 1] == '<' || (*stream)[stream_index + 1] == '>')
 		{
+			//get rid of whitespace before < or >
+			while (buffer[buffer_index] == '\t' ||
+				buffer[buffer_index] == ' ')
+			{
+				buffer[buffer_index--] = '\0';
+			}
+
 			stream_index++;
 			if ((*stream)[stream_index] == '<')
 			{
@@ -838,10 +845,17 @@ command_t commandize_stream(char** stream, size_t* stream_size)
 			if (is_input == 1)
 			{
 				strcpy(input, buffer_redirect);
+				output == NULL;
+			}
+			else if (is_output == 1)
+			{
+				strcpy(output, buffer_redirect);
+				input = NULL;
 			}
 			else
 			{
-				strcpy(output, buffer_redirect);
+				input = NULL;
+				output = NULL;
 			}
 			//if (stream[stream_index] == '\n')
 			//{
