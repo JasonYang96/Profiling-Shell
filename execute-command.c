@@ -294,10 +294,28 @@ execute_command (command_t c, int profiling)
       }
 
     case SUBSHELL_COMMAND:
-      execute_command(c->u.command[0], profiling);
-      c->status = command_status(c->u.command[0]);
-      break;
-
+    {
+        pid_t subshell = fork();
+        if (subshell == -1)
+        {
+            error(2, 0, "forking subshell problem");
+        }
+        else if (subshell == 0) //child
+        {
+            execute_command(c->u.command[0], profiling);
+        }
+        else //parent
+        {
+            int status;
+            while(waitpid(subshell, &status, 0) == 0)
+            {
+                continue;
+            }
+            c->status = command_status(c->u.command[0]);
+        }
+        break;
+    }
+    
     default:
       abort ();
     }
