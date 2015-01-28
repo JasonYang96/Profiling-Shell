@@ -1,4 +1,32 @@
-This is a skeleton for CS 111 Lab 1.
+Jason Yang 804331785
+Kelly Ou 404146997
 
-Replace this README file with notes on your implementation.
-Mentions any special features or limitations.
+What it does:
+For just Lab1a, we parse the shell script and print out the commands in standard form.
+For Lab1a and Lab1b, we have the ability to parse the commands and print it out in standard form or perform what the shell would do with the shell script.
+
+Lab 1a Implementations:
+-t flag to indicate you only want to print the shell script
+Simple Commands
+Subshell Commands
+Until Commands
+While Commands
+If Commands
+Comments
+Simple Syntax Error Checking
+
+Lab1a Semi-Implementations:
+Sequence Commands: only works with simple commands
+Pipe Commands: only works with simple commands
+Input/Output implementation: only simple cases work.
+
+Lab1b Implementation:
+Should be implmented fully
+Simple Commands
+Subshell Commands
+Until Commands
+While Commands
+If Commands
+
+Limitations:
+Since this is Lab1b, we have not implemented the profiling implementation yet

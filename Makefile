@@ -20,8 +20,8 @@
 # However, don't rest until it's warning-free!
 
 CC = gcc
-WERROR_CFLAGS = -Werror
-CFLAGS = -m32 -g -Wall -Wextra $(WERROR_CFLAGS)
+#WERROR_CFLAGS = -Werror
+CFLAGS = -g -Wall -Wextra $(WERROR_CFLAGS) -std=gnu11 -lrt
 LAB = 1
 DISTDIR = lab1-$(USER)
 CHECK_DIST = ./check-dist
@@ -47,7 +47,8 @@ DIST_SOURCES = \
 
 profsh: $(PROFSH_OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $(PROFSH_OBJECTS)
-
+debug: $(PROFSH_OBJECTS)
+	$(CC) $(CFLAGS) -fsanitize=address -fsanitize=undefined -Wl,--rpath=/usr/local/cs/lib64 -o profsh $(PROFSH_OBJECTS)
 alloc.o: alloc.h
 execute-command.o main.o print-command.o read-command.o: command.h
 execute-command.o print-command.o read-command.o: command-internals.h
