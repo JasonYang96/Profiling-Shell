@@ -197,14 +197,43 @@ execute_command (command_t c, int profiling)
                 {
                     error(2, 0, "Error closing left pipefd");
                 }
-                clock_gettime(CLOCK_MONOTONIC, &left_end_time);
+                //get times for left
+                if (profiling != -1 && !write_error)
+                {
+                    //get user and CPU time
+                    left_User_time = left_rusage.ru_utime.tv_sec + (left_rusage.ru_utime.tv_usec/1000000.0);
+                    left_CPU_Time = left_rusage.ru_stime.tv_sec + (left_rusage.ru_stime.tv_usec/1000000.0);
+
+                    //get UTC_time
+                    clock_gettime(CLOCK_REALTIME, &left_UTC_time);
+                    left_UTC_Time = left_UTC_time.tv_sec + (left_UTC_time.tv_nsec/1000000000.0);
+
+                    clock_gettime(CLOCK_MONOTONIC, &left_end_time);
+                    //get real time
+                    left_real_time.tv_sec = left_end_time.tv_sec - left_begin_time.tv_sec;
+                    left_real_time.tv_nsec = left_end_time.tv_nsec - left_begin_time.tv_nsec;
+                    //take care of nsec carryover
+                    if (left_real_time.tv_nsec < 0)
+                    {
+                     left_real_time.tv_sec--;
+                     left_real_time.tv_nsec += 1000000000.0;
+                    }
+                    left_Real_time = left_real_time.tv_sec + (left_real_time.tv_nsec/1000000000.0);
+
+                    snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", left_UTC_Time, left_Real_time, left_User_time, left_CPU_Time, getpid());
+                    if (write(profiling, buffer, strlen(buffer)) == -1)
+                    {
+                        write_error = true;
+                    }
+                }
+
                 if(wait4(right, &status, 0, &right_rusage) == -1)
                 {
-                    error(2, 0, "Error closing left pipefd");
+                    error(2, 0, "Error closing right pipefd");
                 }
                 if(close(pipefd[0]) == -1)
                 {
-                    error(2, 0, "Error waiting for left pipe");
+                    error(2, 0, "Error waiting for right pipe");
                 }
                 c->status = WEXITSTATUS(status);
                 clock_gettime(CLOCK_MONOTONIC, &right_end_time);
@@ -238,39 +267,22 @@ execute_command (command_t c, int profiling)
                 }
             }
         }
-
-        //get times for left
-        if (profiling != -1 && !write_error)
-        {
-            //get user and CPU time
-            left_User_time = left_rusage.ru_utime.tv_sec + (left_rusage.ru_utime.tv_usec/1000000.0);
-            left_CPU_Time = left_rusage.ru_stime.tv_sec + (left_rusage.ru_stime.tv_usec/1000000.0);
-
-            //get real time
-            left_real_time.tv_sec = left_end_time.tv_sec - left_begin_time.tv_sec;
-            left_real_time.tv_nsec = left_end_time.tv_nsec - left_begin_time.tv_nsec;
-            //take care of nsec carryover
-            if (left_real_time.tv_nsec < 0)
-            {
-             left_real_time.tv_sec--;
-             left_real_time.tv_nsec += 1000000000.0;
-            }
-            left_Real_time = left_real_time.tv_sec + (left_real_time.tv_nsec/1000000000.0);
-
-            //get UTC_time
-            clock_gettime(CLOCK_REALTIME, &left_UTC_time);
-            left_UTC_Time = left_UTC_time.tv_sec + (left_UTC_time.tv_nsec/1000000000.0);
-            snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", left_UTC_Time, left_Real_time, left_User_time, left_CPU_Time, getpid());
-            if (write(profiling, buffer, strlen(buffer)) == -1)
-            {
-                write_error = true;
-            }
-        }
         break;
-      }
+    }
 
     case SIMPLE_COMMAND:
       {
+        if (strcmp(c->u.word[0], "exec") == 0)
+        {
+            if (c->u.word[1] != NULL)
+            {
+                execvp(c->u.word[1], &(c->u.word[1]));
+            }
+            else
+            {
+                error(2, 0, "exec has no command");
+            }
+        }
         clock_gettime(CLOCK_MONOTONIC, &begin_time);
         pid_t pid = fork();
         char** word = NULL;
@@ -326,6 +338,7 @@ execute_command (command_t c, int profiling)
             {
                 error(2, 0, "Error running execvp");
             }
+            _exit(1);
         }
         else //parent process
         {
@@ -334,7 +347,6 @@ execute_command (command_t c, int profiling)
             {
                 continue;
             }
-            //get endtime
             c->status = WEXITSTATUS(status);
         }
         if (profiling != -1 && !write_error)
@@ -385,6 +397,7 @@ execute_command (command_t c, int profiling)
         else if (subshell == 0) //child
         {
             execute_command(c->u.command[0], profiling);
+            _exit(1);
         }
         else //parent
         {
@@ -417,13 +430,7 @@ execute_command (command_t c, int profiling)
             //get UTC_timeu8u
             clock_gettime(CLOCK_REALTIME, &UTC_time);
             UTC_Time = UTC_time.tv_sec + (UTC_time.tv_nsec/1000000000.0);
-            snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f", UTC_Time, Real_time, User_time, CPU_Time);
-            //print out command in subshell command
-            while(strlen(buffer) != 1020)
-            {
-                sprintf(buffer + strlen(buffer), " s");
-            }
-            sprintf(buffer + strlen(buffer), "\n");
+            snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", UTC_Time, Real_time, User_time, CPU_Time, getpid());
             if (write(profiling, buffer, strlen(buffer)) == -1)
             {
                 write_error = true;
