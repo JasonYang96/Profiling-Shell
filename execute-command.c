@@ -286,6 +286,7 @@ execute_command (command_t c, int profiling)
         clock_gettime(CLOCK_MONOTONIC, &begin_time);
         pid_t pid = fork();
         char** word = NULL;
+        size_t k = 0;
         if (pid == -1) //forking problems
         {
             error(2,0,"Problem Forking");
@@ -376,6 +377,14 @@ execute_command (command_t c, int profiling)
             {
                 snprintf(buffer + strlen(buffer), 1023 - strlen(buffer), " %s", *word);
                 word++;
+            }
+            //check for newlines in buffer
+            for (; k < strlen(buffer); k++)
+            {
+                if (buffer[k] == '\n')
+                {
+                    buffer[k] = ' ';
+                }
             }
             sprintf(buffer + strlen(buffer), "\n");
             if (write(profiling, buffer, strlen(buffer)) == -1)
