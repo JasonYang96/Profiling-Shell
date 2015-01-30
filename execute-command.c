@@ -220,7 +220,7 @@ execute_command (command_t c, int profiling)
                     }
                     left_Real_time = left_real_time.tv_sec + (left_real_time.tv_nsec/1000000000.0);
 
-                    snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", left_UTC_Time, left_Real_time, left_User_time, left_CPU_Time, getpid());
+                    snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", left_UTC_Time, left_Real_time, left_User_time, left_CPU_Time, left);
                     if (write(profiling, buffer, strlen(buffer)) == -1)
                     {
                         write_error = true;
@@ -258,9 +258,9 @@ execute_command (command_t c, int profiling)
                 right_Real_time = right_real_time.tv_sec + (right_real_time.tv_nsec/1000000000.0);
 
                 //get UTC_time
-                clock_gettime(CLOCK_REALTIME, &left_UTC_time);
+                clock_gettime(CLOCK_REALTIME, &right_UTC_time);
                 right_UTC_Time = right_UTC_time.tv_sec + (right_UTC_time.tv_nsec/1000000000.0);
-                snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", right_UTC_Time, right_Real_time, right_User_time, right_CPU_Time, getpid());
+                snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", right_UTC_Time, right_Real_time, right_User_time, right_CPU_Time, right);
                 if (write(profiling, buffer, strlen(buffer)) == -1)
                 {
                     write_error = true;
