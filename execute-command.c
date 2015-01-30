@@ -430,13 +430,14 @@ execute_command (command_t c, int profiling)
             //get UTC_timeu8u
             clock_gettime(CLOCK_REALTIME, &UTC_time);
             UTC_Time = UTC_time.tv_sec + (UTC_time.tv_nsec/1000000000.0);
-            snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", UTC_Time, Real_time, User_time, CPU_Time, getpid());
+            snprintf(buffer, 1023, "%.6f %.6f %.6f %.6f [%d]\n", UTC_Time, Real_time, User_time, CPU_Time, subshell);
             if (write(profiling, buffer, strlen(buffer)) == -1)
             {
                 write_error = true;
             }
-        break;
         }
+
+        break;
     }
     default:
       abort ();
